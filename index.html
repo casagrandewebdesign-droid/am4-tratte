@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1419">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AM4 Tratte">
+<title>AM4 – Configurazione aerei per tratta</title>
+<style>
+  :root{--bg:#0f1419;--card:#18202a;--line:#2a3542;--txt:#e6edf3;--mut:#8b98a5;--f:#e3b341;--j:#58a6ff;--y:#3fb950;--acc:#f0883e;--bad:#f85149}
+  @media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--card:#fff;--line:#d0d7de;--txt:#1f2328;--mut:#656d76}}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);padding:16px;max-width:760px;margin:auto}
+  h1{font-size:1.25rem;margin:4px 0 2px}
+  .sub{color:var(--mut);font-size:.85rem;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 10px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  label{display:block;font-size:.78rem;color:var(--mut);margin-bottom:4px}
+  input,select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:1rem}
+  .F{color:var(--f)}.J{color:var(--j)}.Y{color:var(--y)}
+  details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  summary{padding:12px 14px;cursor:pointer;font-size:.85rem;color:var(--mut);list-style:none;display:flex;justify-content:space-between}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"▾"}
+  details[open] summary::after{content:"▴"}
+  details .in{padding:0 14px 14px}
+  .info{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-bottom:10px}
+  .info .v{font-size:1.15rem;font-weight:700}
+  .info .k{font-size:.72rem;color:var(--mut)}
+  .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center}
+  .sum .n{font-size:1.6rem;font-weight:700}
+  .sum .l{font-size:.75rem;color:var(--mut)}
+  .plane{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
+  .plane.part{border-color:var(--acc)}
+  .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .tag{font-size:.72rem;padding:2px 8px;border-radius:99px;background:var(--line)}
+  .part .tag{background:var(--acc);color:#111}
+  .seats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+  .seats .v{font-size:1.4rem;font-weight:700}
+  .seats .k{font-size:.72rem;color:var(--mut)}
+  .bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line);margin:10px 0 6px}
+  .bar div{height:100%}
+  .meta{font-size:.78rem;color:var(--mut)}
+  .eco{margin-top:8px;padding:8px;border-radius:8px;background:var(--bg);font-size:.82rem}
+  .warn{color:var(--acc);font-size:.85rem;margin-top:10px}
+  .bad{color:var(--bad)}
+  .ex{font-size:.75rem;color:var(--mut);margin-top:8px}
+  .chip{display:inline-block;padding:6px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:.85rem;margin:4px 6px 0 0}
+  button{padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--line);color:var(--txt);font-size:.9rem;cursor:pointer}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<h1>✈️ Configurazione A380-800 per tratta</h1>
+<div class="sub">Configurazione fissa per tratta, calcolata sulla domanda: la imposti una volta e non la tocchi più, con o senza marketing.</div>
+
+<details>
+  <summary id="acSum">Aereo: Airbus A380-800</summary>
+  <div class="in">
+    <div style="margin-bottom:10px"><label>Motore</label>
+      <select id="eng">
+        <option value="gp">GP7270 (default) · 964 km/h · 22,89 lbs/km</option>
+        <option value="t970">RR Trent 970 · 917 km/h · 18,9 lbs/km</option>
+        <option value="t972">RR Trent 972 · 1049 km/h · 22,26 lbs/km</option>
+      </select></div>
+    <div class="info">
+      <div><div class="v">14.500</div><div class="k">autonomia km</div></div>
+      <div><div class="v" id="infoSpd">964</div><div class="k">km/h crociera</div></div>
+      <div><div class="v">9.680</div><div class="k">pista ft</div></div>
+    </div>
+    <div class="grid">
+      <div><label class="Y">Max Economy</label><input id="mY" type="number" inputmode="numeric" value="600"></div>
+      <div><label class="J">Max Business</label><input id="mJ" type="number" inputmode="numeric" value="300"></div>
+      <div><label class="F">Max Prima</label><input id="mF" type="number" inputmode="numeric" value="200"></div>
+    </div>
+    <div class="row2">
+      <div><label>Autonomia (km)</label><input id="rng" type="number" inputmode="numeric" value="14500"></div>
+      <div><label>Velocità (km/h)</label><input id="spd" type="number" inputmode="numeric" value="964"></div>
+      <div><label>Consumo (lbs/km)</label><input id="fc" type="number" step="0.01" inputmode="decimal" value="22.89"></div>
+      <div><label>CO₂ (kg/pax/km)</label><input id="cc" type="number" step="0.01" inputmode="decimal" value="0.16"></div>
+      <div><label>Prezzo aereo ($)</label><input id="acP" type="number" inputmode="numeric" value="215629503"></div>
+      <div><label>Costo A-check ($)</label><input id="chkC" type="number" inputmode="numeric" value="12937770"></div>
+      <div><label>A-check ogni (ore di volo)</label><input id="chkH" type="number" inputmode="numeric" value="450"></div>
+    </div>
+  </div>
+</details>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <h2 style="margin:0">Tratta</h2><button id="clr" style="padding:6px 12px;font-size:.8rem">🧹 Pulisci</button>
+  </div>
+  <div class="grid">
+    <div><label class="Y">Domanda Economy</label><input id="dY" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+    <div><label class="J">Domanda Business</label><input id="dJ" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+    <div><label class="F">Domanda Prima</label><input id="dF" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+  </div>
+  <div class="row2">
+    <div><label>Distanza (km)</label><input id="km" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+    <div><label>Modalità</label><select id="mode"><option value="R">Realism</option><option value="E">Easy</option></select></div>
+  </div>
+  <button id="go" style="width:100%;margin-top:12px;padding:14px;font-size:1rem;font-weight:600;background:var(--j);color:#fff;border:none">Calcola tratta</button>
+  <div id="ops" style="margin-top:10px"></div>
+</div>
+
+<div class="card">
+  <h2>1 · Configurazione della tratta</h2>
+  <div class="sum">
+    <div><div class="n" id="sPlanes">–</div><div class="l">aerei da mettere</div></div>
+    <div><div class="n" id="sFlights">–</div><div class="l">voli/giorno ciascuno</div></div>
+    <div><div class="n" id="sFull">–</div><div class="l">pieni al 100%</div></div>
+  </div>
+  <div id="planes"></div>
+  <div id="warn" class="warn"></div>
+</div>
+
+<div class="card">
+  <h2>2 · Guadagni</h2>
+  <div class="sum">
+    <div style="grid-column:span 2"><div class="n" id="sProfit" style="color:var(--y);font-size:1.3rem">–</div><div class="l">profitto tratta/giorno con marketing</div></div>
+    <div><div class="n" id="sProfitR" style="font-size:1.3rem">–</div><div class="l" id="sProfitRl">senza marketing</div></div>
+  </div>
+  <div id="mInfo" class="eco" style="text-align:center;margin-top:10px"></div>
+  <div id="prices" style="margin-top:12px"></div>
+  <div id="gains"></div>
+</div>
+
+<div class="card">
+  <h2>Prezzi di mercato</h2>
+  <div class="row2" style="margin-top:0">
+    <div><label>Carburante ($/1000 lbs)</label><input id="fp" type="number" inputmode="numeric" value="300"></div>
+    <div><label>CO₂ ($/1000 quote)</label><input id="cp" type="number" inputmode="numeric" value="100"></div>
+  </div>
+  <div class="ex">Metti il prezzo a cui hai comprato. Riparazioni e personale non sono inclusi.</div>
+</div>
+
+
+<details>
+  <summary>Impostazioni avanzate (training al massimo)</summary>
+  <div class="in">
+    <div class="row2" style="margin-top:0">
+      <div><label>Training carburante (0–3)</label><input id="tf" type="number" min="0" max="3" inputmode="numeric" value="3"></div>
+      <div><label>Training CO₂ (0–5)</label><input id="tc" type="number" min="0" max="5" inputmode="numeric" value="5"></div>
+      <div><label>Con marketing: min %</label><input id="mkLo" type="number" inputmode="numeric" value="92"></div>
+      <div><label>Con marketing: max %</label><input id="mkHi" type="number" inputmode="numeric" value="99"></div>
+      <div><label>Senza marketing %</label><input id="nmLo" type="number" inputmode="numeric" value="45"></div>
+      <div><label>Rientro massimo accettabile (giorni)</label><input id="maxPay" type="number" inputmode="numeric" value="365"></div>
+      <div><label>Cost index (0–200)</label><input id="ci" type="number" min="0" max="200" inputmode="numeric" value="200"></div>
+      <div><label>Voli al giorno</label><select id="flo"><option value="auto">Automatico</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div style="grid-column:1/-1"><label>Arrotondamento posti</label>
+        <select id="rnd"><option value="ceil">Per eccesso (copre tutta la domanda)</option><option value="floor">Per difetto (nessun posto vuoto)</option></select></div>
+    </div>
+  </div>
+</details>
+
+<script>
+const $=id=>document.getElementById(id);
+const num=id=>Math.max(0,parseFloat($(id).value)||0);
+const EPS=1e-9;
+const PRICE={R:{Y:[0.3,150],J:[0.6,500],F:[0.9,1000]},E:{Y:[0.4,170],J:[0.8,560],F:[1.2,1200]}};
+const OPT={Y:1.1,J:1.08,F:1.06};
+const money=v=>'$'+Math.round(v).toLocaleString('it-IT');
+
+const ENG={gp:{n:'GP7270',spd:964,fc:22.89},t970:{n:'RR Trent 970',spd:917,fc:18.9},t972:{n:'RR Trent 972',spd:1049,fc:22.26}};
+function applyEngine(){
+  const e=ENG[$('eng').value];
+  $('spd').value=e.spd; $('fc').value=e.fc;
+}
+function updateAcLabel(){
+  const e=ENG[$('eng').value];
+  $('acSum').textContent=`Aereo: A380-800 · ${e.n} · ${num('spd')} km/h · ${num('fc')} lbs/km`;
+  $('infoSpd').textContent=num('spd');
+}
+function prices(){
+  const km=num('km'); if(!km) return null;
+  const P=PRICE[$('mode').value], o={};
+  for(const c of ['Y','J','F']) o[c]=Math.floor((P[c][0]*km+P[c][1])*OPT[c]);
+  return o;
+}
+// tempo di volo e voli possibili nelle 24 ore
+function timing(){
+  const km=num('km'), ci=Math.min(200,num('ci'));
+  const v=num('spd')*(0.0035*ci+0.3)*($('mode').value==='E'?1.5:1);
+  if(!km||!v) return null;
+  const h=km/v, max=Math.max(0,Math.floor(24/h+EPS));
+  return {v,h,max};
+}
+function flights(){
+  const o=$('flo').value, t=timing();
+  if(o!=='auto') return {f:+o,auto:false,t};
+  return {f:t?Math.max(1,t.max):1,auto:true,t};
+}
+function econ(s,f,L,p){
+  const km=num('km'); if(!km||!p) return null;
+  const d=Math.ceil(km*100)/100;
+  const ci=Math.min(200,num('ci')), tf=Math.min(3,num('tf')), tc=Math.min(5,num('tc'));
+  const fuelLbs=(1-tf/100)*d*num('fc')*(ci/500+0.6);
+  const seats=s.Y+s.J+s.F, loadW=(s.Y+2*s.J+3*s.F)*L;
+  const co2Kg=(1-tc/100)*d*num('cc')*(loadW+seats)*(ci/2000+0.9);
+  const m=maint(f);
+  const rev=(s.Y*p.Y+s.J*p.J+s.F*p.F)*L*f*m.avail;
+  const fuel=fuelLbs/1000*num('fp')*f*m.avail, co2=co2Kg/1000*num('cp')*f*m.avail;
+  const check=m.checkDay, net=rev-fuel-co2-check;
+  const price=num('acP');
+  return {rev,fuel,co2,check,net,pay:net>0&&price?price/net:Infinity};
+}
+// A-check: costo spalmato sui giorni del ciclo + giorni di fermo (Realism: 0,01×costo + 3700 s)
+function maint(f){
+  const t=timing(), cH=num('chkH'), cC=num('chkC');
+  if(!t||!cH) return {avail:1,checkDay:0,between:0,down:0};
+  const between=cH/(t.h*f);
+  const down=($('mode').value==='E'?0.01*cC/2+1860:0.01*cC+3700)/86400;
+  const cycle=between+down;
+  return {avail:between/cycle,checkDay:cC/cycle,between,down};
+}
+const days=x=>isFinite(x)?Math.ceil(x).toLocaleString('it-IT')+' giorni':'mai';
+function breakEven(f,L,p){
+  const z=econ({Y:0,J:0,F:0},f,L,p), one=econ({Y:1,J:0,F:0},f,L,p);
+  const per=one.net-z.net;
+  return per>0?Math.ceil(-z.net/per):'∞';
+}
+const sumBy=(planes,f,L,p,k)=>planes.reduce((t,x)=>t+econ(x.s,f,L,p)[k],0);
+
+// configurazione fissa: calcolata sulla domanda piena (100%), indipendente dal marketing
+const pct=(id,def)=>Math.min(1,Math.max(0.01,(num(id)||def)/100));
+function loads(){return {mkLo:pct('mkLo',92),mkHi:pct('mkHi',99),nmLo:pct('nmLo',45)};}
+function solve(){
+  const d={F:num('dF'),J:num('dJ'),Y:num('dY')};
+  const mY=num('mY')||1, mJ=num('mJ')||1, mF=num('mF')||1;
+  const {f}=flights();
+  const R=$('rnd').value==='ceil'?Math.ceil:Math.floor;
+  const w={F:mY/mF,J:mY/mJ,Y:1}, rem={...d}, planes=[];
+  let guard=0;
+  while((rem.F>0||rem.J>0||rem.Y>0)&&guard++<500){
+    let cap=mY; const s={F:0,J:0,Y:0};
+    for(const c of ['F','J','Y']){
+      if(rem[c]<=0) continue;
+      s[c]=Math.max(0,Math.min(Math.floor(cap/w[c]+EPS),R(rem[c]/f-EPS)));
+      cap-=s[c]*w[c];
+      rem[c]=Math.max(0,rem[c]-s[c]*f);
+    }
+    if(s.F+s.J+s.Y===0) break;
+    const used=mY-cap;
+    planes.push({s,used,pct:used/mY*100,rem:{...rem}});
+  }
+  // l'ultimo aereo parziale resta solo se guadagna anche col marketing al minimo
+  let dropped=null;
+  const pr=prices(), last=planes[planes.length-1];
+  if(pr&&last&&last.pct<99.95){
+    const e=econ(last.s,f,loads().mkLo,pr);
+    if(e&&(e.net<=0||e.pay>(num('maxPay')||Infinity))){dropped={...last,e};planes.pop();}
+  }
+  return {planes,w,mY,f,dropped};
+}
+
+function renderOps(){
+  const {f,auto,t}=flights(), km=num('km');
+  if(!t){$('ops').innerHTML='<span class="meta">Inserisci la distanza per calcolare durata e voli al giorno.</span>';return;}
+  const hh=Math.floor(t.h), mm=Math.round((t.h-hh)*60);
+  const out=[`<span class="chip">⏱ ${hh}h ${String(mm).padStart(2,'0')}m a volo</span><span class="chip">🔁 <b>${f}</b> ${f===1?"volo":"voli"}/giorno ${auto?'(auto)':'(manuale)'}</span><span class="chip">🕒 ${(t.h*f).toFixed(1)}h su 24 in volo</span>`];
+  if(km>num('rng')) out.push(`<div class="bad" style="margin-top:6px">⚠ ${km.toLocaleString('it-IT')} km supera l'autonomia (${num('rng').toLocaleString('it-IT')} km): serve uno scalo.</div>`);
+  if(t.max<1) out.push(`<div class="bad" style="margin-top:6px">⚠ Il volo dura più di 24 ore.</div>`);
+  else if(f>t.max) out.push(`<div class="bad" style="margin-top:6px">⚠ ${f} voli non stanno in 24 ore: al massimo ${t.max}.</div>`);
+  $('ops').innerHTML=out.join('');
+}
+
+const M=x=>'$'+(x/1e6).toLocaleString('it-IT',{maximumFractionDigits:2})+'M';
+function calc(){
+  updateAcLabel();
+  renderOps();
+  const pr=prices(), Ld=loads(), P=x=>Math.round(x*100)+'%';
+  const {planes,w,mY,f,dropped}=solve();
+  $('sPlanes').textContent=planes.length;
+  $('sFull').textContent=planes.filter(p=>p.pct>=99.95).length;
+  $('sFlights').textContent=num('km')?f:'–';
+  const ok=pr&&planes.length;
+  const T=L=>sumBy(planes,f,L,pr,'net');
+  $('sProfit').textContent=ok?`${M(T(Ld.mkLo))} – ${M(T(Ld.mkHi))}`:'–';
+  $('sProfitR').textContent=ok?M(T(Ld.nmLo)):'–';
+  $('sProfitRl').textContent=`senza marketing (${P(Ld.nmLo)})`;
+  const mt=maint(f);
+  $('mInfo').innerHTML=ok?`Investimento ${M(planes.length*num('acP'))} · rientro tratta in ${days(planes.length*num('acP')/T(Ld.mkLo))}<br>A-check ogni ${mt.between.toFixed(1)} giorni, fermo ${(mt.down*24).toFixed(0)} ore (aereo operativo ${(mt.avail*100).toFixed(1)}% del tempo)`:'';
+
+  $('prices').innerHTML=pr?`<div class="seats">
+    <div><div class="v Y" style="font-size:1.1rem">${money(pr.Y)}</div><div class="k">biglietto Economy</div></div>
+    <div><div class="v J" style="font-size:1.1rem">${money(pr.J)}</div><div class="k">biglietto Business</div></div>
+    <div><div class="v F" style="font-size:1.1rem">${money(pr.F)}</div><div class="k">biglietto Prima</div></div></div>`:'';
+
+  $('planes').innerHTML=planes.map((p,i)=>{
+    const isPart=p.pct<99.95;
+    const bw=c=>(p.s[c]*w[c]/mY*100).toFixed(2);
+    const r=p.rem;
+    const left=(r.F||r.J||r.Y)?`Domanda residua dopo: Y ${Math.round(r.Y)} · J ${Math.round(r.J)} · F ${Math.round(r.F)}`:'Domanda esaurita ✓';
+    return `<div class="plane ${isPart?'part':''}">
+      <div class="ph"><b>Aereo ${i+1}</b><span class="tag">${isPart?'parziale '+p.pct.toFixed(0)+'%':'pieno'}</span></div>
+      <div class="seats">
+        <div><div class="v Y">${p.s.Y}</div><div class="k">Economy</div></div>
+        <div><div class="v J">${p.s.J}</div><div class="k">Business</div></div>
+        <div><div class="v F">${p.s.F}</div><div class="k">Prima</div></div>
+      </div>
+      <div class="bar"><div style="width:${bw('F')}%;background:var(--f)"></div><div style="width:${bw('J')}%;background:var(--j)"></div><div style="width:${bw('Y')}%;background:var(--y)"></div></div>
+      <div class="meta">${left}</div>
+    </div>`;
+  }).join('');
+
+  $('gains').innerHTML=pr?planes.map((p,i)=>{
+    const isPart=p.pct<99.95;
+    const E=L=>econ(p.s,f,L,pr);
+    const col=v=>`<b style="color:${v>=0?'var(--y)':'var(--bad)'}">${money(v)}</b>`;
+    const e1=E(Ld.mkLo);
+    return `<div class="plane ${isPart?'part':''}">
+      <div class="ph"><b>Aereo ${i+1} · ${p.s.Y}/${p.s.J}/${p.s.F}</b><span class="tag">rientro ${days(e1.pay)}</span></div>
+      <div style="font-size:.85rem;line-height:1.6">Con marketing (${P(Ld.mkLo)}–${P(Ld.mkHi)}): ${col(e1.net)} – ${col(E(Ld.mkHi).net)}/giorno
+      <br>Senza marketing (${P(Ld.nmLo)}): ${col(E(Ld.nmLo).net)}/giorno</div>
+      <div class="meta" style="margin-top:4px">Costi/giorno: carburante ${money(e1.fuel)} · CO₂ ~${money(e1.co2)} · A-check ${money(e1.check)}</div>
+      ${isPart?`<div class="meta" style="margin-top:4px"><b style="color:var(--txt)">✓ Conviene</b> · pareggio con almeno ${breakEven(f,Ld.mkLo,pr)} posti economy${E(Ld.nmLo).net<0?` · <span class="bad">senza marketing al ${P(Ld.nmLo)} va in perdita</span>`:''}</div>`:''}
+    </div>`;
+  }).join(''):'<div class="meta" style="margin-top:10px">Inserisci la distanza per vedere i guadagni.</div>';
+
+  const last=planes[planes.length-1], w2=[];
+  if(dropped) w2.push(dropped.e.net<=0
+    ?`✗ Aereo ${planes.length+1} escluso: con ${dropped.s.Y}/${dropped.s.J}/${dropped.s.F} posti, anche col marketing al ${P(Ld.mkLo)} perderebbe ${money(-dropped.e.net)} al giorno.`
+    :`✗ Aereo ${planes.length+1} escluso: con ${dropped.s.Y}/${dropped.s.J}/${dropped.s.F} posti guadagnerebbe solo ${money(dropped.e.net)} al giorno e ripagherebbe l'aereo in ${days(dropped.e.pay)} (oltre i ${num('maxPay')} impostati).`);
+  if(last&&(last.rem.F>0||last.rem.J>0||last.rem.Y>0))
+    w2.push(`Restano passeggeri non serviti (Y ${Math.round(last.rem.Y)} · J ${Math.round(last.rem.J)} · F ${Math.round(last.rem.F)}).`);
+  $('warn').innerHTML=w2.join('<br>');
+}
+
+try{const sv=localStorage.getItem('am4eng');if(sv&&ENG[sv]){$('eng').value=sv;applyEngine();}}catch(e){}
+$('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('am4eng',$('eng').value)}catch(e){}updateAcLabel();});
+['spd','fc'].forEach(id=>$(id).addEventListener('input',updateAcLabel));
+$('go').addEventListener('click',()=>{if(document.activeElement)document.activeElement.blur();calc();$('sPlanes').scrollIntoView({behavior:'smooth',block:'center'});});
+document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();$('go').click();}}));
+$('clr').addEventListener('click',()=>{['dY','dJ','dF','km'].forEach(id=>$(id).value='');calc();$('dY').focus();});
+calc();
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
+</script>
+<div class="ex" style="text-align:center;margin:20px 0 30px">Calcolatore non ufficiale per Airline Manager 4. Prezzi, consumi e A-check usano formule stimate dalla community: i risultati sono indicativi.</div>
+</body>
+</html>
