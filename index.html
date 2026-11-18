@@ -61,11 +61,18 @@
   .best{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer}
   .best:active{background:var(--line)}
   .best .t{display:flex;justify-content:space-between;gap:8px;font-size:.9rem}
+  h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:16px 0 8px}
+  .det{margin-top:10px;padding-top:6px;border-top:1px solid var(--line);cursor:default}
+  .sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);overflow:auto;padding:12px}
+  .sheetIn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:760px;margin:0 auto}
 </style>
 </head>
 <body>
-<h1>✈️ AM4 Configuratore Tratte</h1>
-<div class="sub">Configurazione fissa per tratta, con tutte le classi nello stesso rapporto della domanda: la imposti una volta e non la tocchi più, con o senza marketing.</div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+  <h1>✈️ AM4 Configuratore Tratte</h1>
+  <button id="setBtn" aria-label="Impostazioni" style="font-size:1.2rem;padding:6px 12px">⚙️</button>
+</div>
+<div class="sub">Scegli aereo e hub: le tratte migliori si calcolano da sole. Tocca una tratta per vedere posti, prezzi e guadagni.</div>
 
 <div class="card" style="padding:12px 14px">
   <label>Aereo</label>
@@ -86,9 +93,54 @@
   </div>
 </div>
 
-<details>
-  <summary id="acSum">Dettagli aereo: Airbus A380-800</summary>
-  <div class="in">
+<div class="card">
+  <h2>🔎 Tratte migliori dall'hub</h2>
+  <div class="row2" style="margin-top:0">
+    <div><label>Distanza min (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
+    <div><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
+    <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option></select></div>
+    <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+    <div><label>Cerca</label><input id="bQ" type="search" autocomplete="off" placeholder="codice, città, paese"></div>
+    <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
+  </div>
+  <div id="bOut" style="margin-top:6px"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
+  <div class="ex">Solo voli diretti, piste controllate in Realism. Netto = ricavi − carburante − CO₂ − A-check, col marketing al minimo. Cost index e prezzi in ⚙️.</div>
+</div>
+
+<!-- dettaglio della tratta: viene spostato dentro la tratta toccata -->
+<div id="detailHome" style="display:none">
+ <div id="detail" class="det">
+  <div id="apInfo" class="meta"></div>
+  <div id="ops" style="margin-top:6px"></div>
+  <h3>Configurazione</h3>
+  <div class="sum">
+    <div><div class="n" id="sPlanes">–</div><div class="l">aerei da mettere</div></div>
+    <div><div class="n" id="sFlights">–</div><div class="l">voli/giorno ciascuno</div></div>
+    <div><div class="n" id="sFull">–</div><div class="l">pieni al 100%</div></div>
+  </div>
+  <div id="planes"></div>
+  <div id="warn" class="warn"></div>
+  <h3>Prezzi consigliati</h3>
+  <div id="prices"></div>
+  <div class="ex">Prezzo automatico × 1,10 (Y) · 1,08 (J) · 1,06 (F), meno 5 $ e arrotondato per difetto.</div>
+  <h3>Guadagni</h3>
+  <div class="sum">
+    <div style="grid-column:span 2"><div class="n" id="sProfit" style="color:var(--y);font-size:1.2rem">–</div><div class="l">profitto tratta/giorno con marketing</div></div>
+    <div><div class="n" id="sProfitR" style="font-size:1.2rem">–</div><div class="l" id="sProfitRl">senza marketing</div></div>
+  </div>
+  <div id="mInfo" class="eco" style="text-align:center;margin-top:10px"></div>
+  <div id="gains"></div>
+  <div class="ex">Totali = ricavi − A-check; per ogni aereo anche il netto con carburante e CO₂.</div>
+ </div>
+ <input id="dY" type="number"><input id="dJ" type="number"><input id="dF" type="number"><input id="km" type="number">
+</div>
+
+<div id="setPanel" class="sheet" style="display:none">
+  <div class="sheetIn">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h2 style="margin:0">⚙️ Impostazioni</h2><button id="setClose">✕</button>
+    </div>
+    <h3 id="acSum" style="margin-top:0">Aereo</h3>
     <div style="margin-bottom:10px"><label>Motore</label>
       <select id="eng"></select></div>
     <div class="info">
@@ -109,84 +161,13 @@
       <div><label>Costo A-check ($)</label><input id="chkC" type="number" inputmode="numeric" value="12937770"></div>
       <div><label>A-check ogni (ore di volo)</label><input id="chkH" type="number" inputmode="numeric" value="450"></div>
     </div>
-  </div>
-</details>
-
-<div class="card">
-  <h2>🔎 Tratte migliori dall'hub</h2>
-  <div id="bOut"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
-  <details style="margin:10px 0 0;background:var(--bg)">
-    <summary>Filtri</summary>
-    <div class="in">
-      <div class="row2" style="margin-top:0">
-        <div><label>Distanza minima (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
-        <div><label>Distanza massima (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
-        <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto al giorno per aereo</option><option value="fleet">Profitto totale tratta (tutti gli aerei)</option><option value="trip">Profitto per volo</option></select></div>
-        <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
-      </div>
-    </div>
-  </details>
-  <div class="ex">Solo voli diretti, piste controllate in Realism. Netto = ricavi − carburante − CO₂ − A-check, col marketing al minimo. Voli al giorno, cost index e prezzi dalle impostazioni avanzate. Tocca una tratta per vedere configurazione e guadagni.</div>
-</div>
-
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <h2 style="margin:0">Tratta scelta</h2><button id="clr" style="padding:6px 12px;font-size:.8rem">🧹 Pulisci</button>
-  </div>
-  <div class="ap" style="margin-bottom:6px"><label>Destinazione (o tocca una tratta qui sopra)</label><input id="dst" autocomplete="off" autocapitalize="characters" placeholder="IATA, ICAO o città"><div class="sug" id="dstS"></div></div>
-  <div id="apInfo" class="meta" style="margin-bottom:10px">Tocca una tratta qui sopra o cerca una destinazione.</div>
-  <div style="display:none">
-  <div class="grid">
-    <div><label class="Y">Domanda Economy</label><input id="dY" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-    <div><label class="J">Domanda Business</label><input id="dJ" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-    <div><label class="F">Domanda Prima</label><input id="dF" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-  </div>
-  <div class="row2">
-    <div><label>Distanza (km)</label><input id="km" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-  </div>
-  <button id="go" style="width:100%;margin-top:12px;padding:14px;font-size:1rem;font-weight:600;background:var(--j);color:#fff;border:none">Calcola tratta</button>
-  </div>
-  <div id="ops" style="margin-top:10px"></div>
-</div>
-
-<div class="card">
-  <h2>1 · Configurazione della tratta</h2>
-  <div class="sum">
-    <div><div class="n" id="sPlanes">–</div><div class="l">aerei da mettere</div></div>
-    <div><div class="n" id="sFlights">–</div><div class="l">voli/giorno ciascuno</div></div>
-    <div><div class="n" id="sFull">–</div><div class="l">pieni al 100%</div></div>
-  </div>
-  <div id="planes"></div>
-  <div id="warn" class="warn"></div>
-</div>
-
-<div class="card">
-  <h2>2 · Prezzi consigliati</h2>
-  <div id="prices"><div class="meta">Inserisci la distanza per vedere i prezzi.</div></div>
-  <div class="ex">Prezzo automatico × 1,10 (Economy) · 1,08 (Business) · 1,06 (Prima), meno 5 $ e arrotondato per difetto. I guadagni sotto usano questi prezzi.</div>
-</div>
-
-<div class="card">
-  <h2>3 · Guadagni</h2>
-  <div class="sum">
-    <div style="grid-column:span 2"><div class="n" id="sProfit" style="color:var(--y);font-size:1.3rem">–</div><div class="l">profitto tratta/giorno con marketing</div></div>
-    <div><div class="n" id="sProfitR" style="font-size:1.3rem">–</div><div class="l" id="sProfitRl">senza marketing</div></div>
-  </div>
-  <div id="mInfo" class="eco" style="text-align:center;margin-top:10px"></div>
-  <div id="gains"></div>
-  <div class="ex">I totali sono ricavi meno A-check. Per ogni aereo c'è anche la stima di carburante e CO₂, coi prezzi delle impostazioni avanzate.</div>
-</div>
-
-<details>
-  <summary>Impostazioni avanzate</summary>
-  <div class="in">
+    <h3>Costi e calcolo</h3>
     <div class="row2" style="margin-top:0">
       <div><label>Con marketing: min %</label><input id="mkLo" type="number" inputmode="numeric" value="92"></div>
       <div><label>Con marketing: max %</label><input id="mkHi" type="number" inputmode="numeric" value="99"></div>
       <div><label>Senza marketing %</label><input id="nmLo" type="number" inputmode="numeric" value="45"></div>
       <div><label>Rientro massimo accettabile (giorni)</label><input id="maxPay" type="number" inputmode="numeric" value="365"></div>
       <div><label>Cost index (0–200)</label><input id="ci" type="number" min="0" max="200" inputmode="numeric" value="200"></div>
-      <div><label>Voli al giorno</label><select id="flo"><option value="auto">Automatico</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
       <div><label>Prezzo carburante ($ / 1.000 lbs)</label><input id="fuelP" class="keep" type="number" inputmode="numeric" value="500"></div>
       <div><label>Prezzo CO₂ ($ / 1.000 quote)</label><input id="co2P" class="keep" type="number" inputmode="numeric" value="120"></div>
       <div><label>Training carburante (0–3)</label><input id="tF" class="keep" type="number" min="0" max="3" inputmode="numeric" value="3"></div>
@@ -195,7 +176,7 @@
         <select id="rnd"><option value="ceil">Per eccesso (copre tutta la domanda)</option><option value="floor">Per difetto (nessun posto vuoto)</option></select></div>
     </div>
   </div>
-</details>
+</div>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -240,7 +221,7 @@ function applyEngine(){
 }
 function updateAcLabel(){
   const a=curAc(), e=ENGOF()[$('eng').value];
-  $('acSum').textContent=`Dettagli: ${a.n} · ${e.n} · ${num('spd')} km/h · ${num('fc')} lbs/km`;
+  $('acSum').textContent=`Aereo: ${a.n} · ${e.n}`;
   $('infoSpd').textContent=num('spd');
 }
 function prices(){return pricesFor(num('km'));}
@@ -498,9 +479,10 @@ async function fillRoute(){
     calc();
   }catch(e){$('apInfo').innerHTML=`<span class="bad">Errore nel caricare i dati: ${esc(e.message)}</span>`;}
 }
+let lastRes=null, lastKey='net';
 async function findBest(){
-  const out=$('bOut');
-  if(hubIdx==null){out.innerHTML='<div class="warn">Scegli prima l\'hub nella sezione Tratta.</div>';return;}
+  const out=$('bOut'); parkDetail();
+  if(hubIdx==null){out.innerHTML='<div class="warn">Scegli prima l\'hub.</div>';return;}
   out.innerHTML='<div class="meta" style="margin-top:10px">Calcolo…</div>';
   let row; try{row=await demandRow(hubIdx);}catch(e){out.innerHTML=`<div class="bad">${esc(e.message)}</div>`;return;}
   const a=curAc(), cap=num('mY')||1, L=loads().mkLo, fo=$('flo').value;
@@ -523,8 +505,15 @@ async function findBest(){
   }
   const key=$('bSort').value==='trip'?'trip':$('bSort').value==='fleet'?'fleet':'net';
   res.sort((x,y)=>y[key]-x[key]);
-  const top=res.slice(0,+$('bN').value);
-  if(!top.length){out.innerHTML='<div class="warn">Nessuna tratta trovata con questi filtri.</div>';return;}
+  lastRes=res; lastKey=key; renderBest();
+}
+function renderBest(){
+  parkDetail();
+  const res=lastRes, key=lastKey, out=$('bOut'), a=curAc();
+  const q=$('bQ').value.trim().toUpperCase();
+  const pool=q?res.filter(r=>{const x=APS[r.j];return x[0]===q||x[1]===q||x[0].startsWith(q)||x[2].toUpperCase().includes(q)||x[3].toUpperCase().includes(q);}):res;
+  const top=pool.slice(0,+$('bN').value);
+  if(!top.length){out.innerHTML=`<div class="warn">${q?'Nessuna tratta valida per questa ricerca (fuori filtri, autonomia o pista).':'Nessuna tratta trovata con questi filtri.'}</div>`;return;}
   out.innerHTML=`<div class="meta" style="margin-top:10px">${it(res.length)} destinazioni valide da ${esc(apCode(hubIdx))} con ${esc(a.n)}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
@@ -533,6 +522,7 @@ async function findBest(){
       <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g · domanda <span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></div>
       <div class="meta">Config. 1° aereo ${r.s.Y}/${r.s.J}/${r.s.F} · la domanda riempie ~${r.planes.toLocaleString('it-IT',{maximumFractionDigits:1})} aerei${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
     </div>`;}).join('');
+  if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
 }
 async function loadData(){
   try{
@@ -562,18 +552,26 @@ async function loadData(){
     if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();}
   }catch(e){$('apInfo').innerHTML='<span class="bad">Dati aeroporti non disponibili: puoi comunque inserire domanda e distanza a mano.</span>';}
 }
-setupAp('hub','hubS',i=>{hubIdx=i;try{localStorage.setItem('am4hub',i)}catch(e){}fillRoute();findBest();});
-setupAp('dst','dstS',i=>{dstIdx=i;fillRoute();});
+setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
 ['ac','eng','mode','flo','rnd','bSort','bN'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{
+  if(e.target.closest('#detail')) return;
   const d=e.target.closest('[data-j]'); if(!d) return;
-  dstIdx=+d.dataset.j; $('dst').value=apLabel(dstIdx);
-  document.querySelectorAll('#bOut .best').forEach(x=>x.style.borderColor=x===d?'var(--j)':'');
-  fillRoute().then(()=>$('sPlanes').scrollIntoView({behavior:'smooth',block:'center'}));
+  const j=+d.dataset.j;
+  if(j===dstIdx&&d.contains($('detail'))){parkDetail();dstIdx=null;markSel();return;}
+  dstIdx=j; markSel(); d.appendChild($('detail'));
+  fillRoute().then(()=>d.scrollIntoView({behavior:'smooth',block:'start'}));
 });
+function parkDetail(){$('detailHome').prepend($('detail'));}
+function markSel(){document.querySelectorAll('#bOut .best').forEach(x=>x.style.borderColor=+x.dataset.j===dstIdx?'var(--j)':'');}
+$('bQ').addEventListener('input',()=>{if(lastRes)renderBest();});
+$('setBtn').addEventListener('click',()=>{$('setPanel').style.display='block';document.body.style.overflow='hidden';});
+const closeSet=()=>{$('setPanel').style.display='none';document.body.style.overflow='';if(dstIdx!=null)calc();};
+$('setClose').addEventListener('click',closeSet);
+$('setPanel').addEventListener('click',e=>{if(e.target===$('setPanel'))closeSet();});
 // impostazioni costi ricordate
 document.querySelectorAll('.keep').forEach(el=>{
   try{const v=localStorage.getItem('am4_'+el.id); if(v!=null) el.value=v;}catch(e){}
@@ -590,9 +588,7 @@ applyAircraft();
 $('ac').addEventListener('change',()=>{try{localStorage.setItem('am4ac',$('ac').value)}catch(e){}applyAircraft();calc();if(hubIdx!=null&&dstIdx!=null)fillRoute();});
 $('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('am4eng_'+$('ac').value,$('eng').value)}catch(e){}updateAcLabel();});
 ['spd','fc'].forEach(id=>$(id).addEventListener('input',updateAcLabel));
-$('go').addEventListener('click',()=>{if(document.activeElement)document.activeElement.blur();calc();$('sPlanes').scrollIntoView({behavior:'smooth',block:'center'});});
-document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();$('go').click();}}));
-$('clr').addEventListener('click',()=>{['dY','dJ','dF','km','dst'].forEach(id=>$(id).value='');dstIdx=null;$('apInfo').textContent='Tocca una tratta qui sopra o cerca una destinazione.';calc();$('dst').focus();});
+document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();e.blur();}}));
 calc();
 loadData();
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
