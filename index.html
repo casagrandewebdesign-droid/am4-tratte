@@ -98,7 +98,7 @@
   <div class="row2" style="margin-top:0">
     <div class="dEasy"><label>Distanza min (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
     <div class="dEasy"><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
-    <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option></select></div>
+    <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option><option value="n">Aerei su tratta</option></select></div>
     <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
     <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
   </div>
@@ -484,10 +484,11 @@ async function findBest(){
     const rev=(s.Y*p.Y+s.J*p.J+s.F*p.F)*L*f*m.avail;
     const net=rev-m.checkDay-fuelCo2Day(s,km,f,L,m.avail);
     const planes=units/(cap*f);
-    res.push({j,km,f,h:t.h,D,s,net,trip:net/(f*m.avail),planes,fleet:net*Math.max(1,Math.floor(planes))});
+    const n=Math.max(1,Math.floor(planes));
+    res.push({j,km,f,h:t.h,D,s,net,trip:net/(f*m.avail),planes,n,fleet:net*n});
   }
-  const key=$('bSort').value==='trip'?'trip':$('bSort').value==='fleet'?'fleet':'net';
-  res.sort((x,y)=>y[key]-x[key]);
+  const sv=$('bSort').value, key=sv==='trip'?'trip':sv==='fleet'?'fleet':sv==='n'?'n':'net';
+  res.sort((x,y)=>(y[key]-x[key])||(y.net-x.net));
   lastRes=res; lastKey=key; renderBest();
 }
 function renderBest(){
@@ -499,14 +500,14 @@ function renderBest(){
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
     return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
-      <div class="t"><b>${esc(apCode(r.j))} · ${esc(APS[r.j][2])}</b><b style="color:${col}">${money(r.net)}/g</b></div>
-      <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g · domanda <span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></div>
+      <div class="t"><span><b>${esc(apCode(r.j))} · ${esc(APS[r.j][2])}</b> <span style="font-size:.8rem;white-space:nowrap"><span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></span></span><b style="color:${col};white-space:nowrap">${money(r.net)}/g</b></div>
+      <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g</div>
       <div class="seats" style="margin:10px 0 6px">
         <div><div class="v Y">${r.s.Y}</div><div class="k">Economy</div></div>
         <div><div class="v J">${r.s.J}</div><div class="k">Business</div></div>
         <div><div class="v F">${r.s.F}</div><div class="k">Prima</div></div>
       </div>
-      <div class="meta" style="text-align:center">${Math.max(1,Math.floor(r.planes))} ${Math.max(1,Math.floor(r.planes))===1?'aereo':'aerei'} da mettere${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
+      <div class="meta" style="text-align:center">Aerei su tratta: <b style="color:var(--txt)">${r.n}</b>${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
     </div>`;}).join('');
   if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
 }
