@@ -84,7 +84,6 @@
       <div><label>Autonomia (km)</label><input id="rng" type="number" inputmode="numeric" value="14500"></div>
       <div><label>Velocità (km/h)</label><input id="spd" type="number" inputmode="numeric" value="964"></div>
       <div><label>Consumo (lbs/km)</label><input id="fc" type="number" step="0.01" inputmode="decimal" value="22.89"></div>
-      <div><label>CO₂ (kg/pax/km)</label><input id="cc" type="number" step="0.01" inputmode="decimal" value="0.16"></div>
       <div><label>Prezzo aereo ($)</label><input id="acP" type="number" inputmode="numeric" value="215629503"></div>
       <div><label>Costo A-check ($)</label><input id="chkC" type="number" inputmode="numeric" value="12937770"></div>
       <div><label>A-check ogni (ore di volo)</label><input id="chkH" type="number" inputmode="numeric" value="450"></div>
@@ -134,24 +133,13 @@
   </div>
   <div id="mInfo" class="eco" style="text-align:center;margin-top:10px"></div>
   <div id="gains"></div>
+  <div class="ex">Ricavi meno A-check. Carburante e CO₂ non sono inclusi: sottraili tu in base al prezzo a cui compri.</div>
 </div>
-
-<div class="card">
-  <h2>Prezzi di mercato</h2>
-  <div class="row2" style="margin-top:0">
-    <div><label>Carburante ($/1000 lbs)</label><input id="fp" type="number" inputmode="numeric" value="300"></div>
-    <div><label>CO₂ ($/1000 quote)</label><input id="cp" type="number" inputmode="numeric" value="100"></div>
-  </div>
-  <div class="ex">Metti il prezzo a cui hai comprato. Riparazioni e personale non sono inclusi.</div>
-</div>
-
 
 <details>
-  <summary>Impostazioni avanzate (training al massimo)</summary>
+  <summary>Impostazioni avanzate</summary>
   <div class="in">
     <div class="row2" style="margin-top:0">
-      <div><label>Training carburante (0–3)</label><input id="tf" type="number" min="0" max="3" inputmode="numeric" value="3"></div>
-      <div><label>Training CO₂ (0–5)</label><input id="tc" type="number" min="0" max="5" inputmode="numeric" value="5"></div>
       <div><label>Con marketing: min %</label><input id="mkLo" type="number" inputmode="numeric" value="92"></div>
       <div><label>Con marketing: max %</label><input id="mkHi" type="number" inputmode="numeric" value="99"></div>
       <div><label>Senza marketing %</label><input id="nmLo" type="number" inputmode="numeric" value="45"></div>
@@ -192,7 +180,7 @@ function fillEngines(sel){
 function applyAircraft(){
   const a=curAc();
   $('mY').value=a.cap; $('mJ').value=Math.floor(a.cap/2); $('mF').value=Math.floor(a.cap/3);
-  $('rng').value=a.rng; $('cc').value=a.cc; $('acP').value=a.price; $('chkC').value=a.chkC; $('chkH').value=a.chkH;
+  $('rng').value=a.rng; $('acP').value=a.price; $('chkC').value=a.chkC; $('chkH').value=a.chkH;
   $('infoRng').textContent=it(a.rng); $('infoRwy').textContent=it(a.rwy);
   let sv=null; try{sv=localStorage.getItem('am4eng_'+$('ac').value)}catch(e){}
   fillEngines(sv); applyEngine();
@@ -232,19 +220,14 @@ function flights(){
   if(o!=='auto') return {f:+o,auto:false,t};
   return {f:t?Math.max(1,t.max):1,auto:true,t};
 }
+// guadagno: ricavi meno A-check (carburante e CO₂ esclusi: prezzi troppo variabili)
 function econ(s,f,L,p){
   const km=num('km'); if(!km||!p) return null;
-  const d=Math.ceil(km*100)/100;
-  const ci=Math.min(200,num('ci')), tf=Math.min(3,num('tf')), tc=Math.min(5,num('tc'));
-  const fuelLbs=(1-tf/100)*d*num('fc')*(ci/500+0.6);
-  const seats=s.Y+s.J+s.F, loadW=(s.Y+2*s.J+3*s.F)*L;
-  const co2Kg=(1-tc/100)*d*num('cc')*(loadW+seats)*(ci/2000+0.9);
   const m=maint(f);
   const rev=(s.Y*p.Y+s.J*p.J+s.F*p.F)*L*f*m.avail;
-  const fuel=fuelLbs/1000*num('fp')*f*m.avail, co2=co2Kg/1000*num('cp')*f*m.avail;
-  const check=m.checkDay, net=rev-fuel-co2-check;
+  const check=m.checkDay, net=rev-check;
   const price=num('acP');
-  return {rev,fuel,co2,check,net,pay:net>0&&price?price/net:Infinity};
+  return {rev,check,net,pay:net>0&&price?price/net:Infinity};
 }
 // A-check: costo spalmato sui giorni del ciclo + giorni di fermo (Realism: 0,01×costo + 3700 s)
 function maint(f){
@@ -369,7 +352,7 @@ function calc(){
       <div class="ph"><b>Aereo ${i+1} · ${p.s.Y}/${p.s.J}/${p.s.F}</b><span class="tag">rientro ${days(e1.pay)}</span></div>
       <div style="font-size:.85rem;line-height:1.6">Con marketing (${P(Ld.mkLo)}–${P(Ld.mkHi)}): ${col(e1.net)} – ${col(E(Ld.mkHi).net)}/giorno
       <br>Senza marketing (${P(Ld.nmLo)}): ${col(E(Ld.nmLo).net)}/giorno</div>
-      <div class="meta" style="margin-top:4px">Costi/giorno: carburante ${money(e1.fuel)} · CO₂ ~${money(e1.co2)} · A-check ${money(e1.check)}</div>
+      <div class="meta" style="margin-top:4px">Ricavi ${money(e1.rev)}/giorno · A-check ${money(e1.check)}/giorno</div>
       ${isPart?`<div class="meta" style="margin-top:4px"><b style="color:var(--txt)">✓ Conviene</b> · pareggio con almeno ${breakEven(f,Ld.mkLo,pr)} posti economy${E(Ld.nmLo).net<0?` · <span class="bad">senza marketing al ${P(Ld.nmLo)} va in perdita</span>`:''}</div>`:''}
     </div>`;
   }).join(''):'<div class="meta" style="margin-top:10px">Inserisci la distanza per vedere i guadagni.</div>';
@@ -398,6 +381,6 @@ $('clr').addEventListener('click',()=>{['dY','dJ','dF','km'].forEach(id=>$(id).v
 calc();
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
 </script>
-<div class="ex" style="text-align:center;margin:20px 0 30px">Calcolatore non ufficiale per Airline Manager 4. Prezzi, consumi e A-check usano formule stimate dalla community: i risultati sono indicativi.</div>
+<div class="ex" style="text-align:center;margin:20px 0 30px">Calcolatore non ufficiale per Airline Manager 4. Prezzi e A-check usano formule stimate dalla community: i risultati sono indicativi.</div>
 </body>
 </html>
