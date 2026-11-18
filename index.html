@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="AM4 Tratte">
-<title>AM4 – Configurazione aerei per tratta</title>
+<title>AM4 Configuratore Tratte</title>
 <style>
   :root{--bg:#0f1419;--card:#18202a;--line:#2a3542;--txt:#e6edf3;--mut:#8b98a5;--f:#e3b341;--j:#58a6ff;--y:#3fb950;--acc:#f0883e;--bad:#f85149}
   @media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--card:#fff;--line:#d0d7de;--txt:#1f2328;--mut:#656d76}}
@@ -56,18 +56,27 @@
 </style>
 </head>
 <body>
-<h1 id="ttl">✈️ Configurazione A380-800 per tratta</h1>
+<h1>✈️ AM4 Configuratore Tratte</h1>
 <div class="sub">Configurazione fissa per tratta, con tutte le classi nello stesso rapporto della domanda: la imposti una volta e non la tocchi più, con o senza marketing.</div>
 
+<div class="card" style="padding:12px 14px">
+  <label>Aereo</label>
+  <select id="ac">
+    <optgroup label="Airbus">
+      <option value="a388">Airbus A380-800</option>
+      <option value="a339">Airbus A330-900neo</option>
+      <option value="a338">Airbus A330-800neo</option>
+    </optgroup>
+    <optgroup label="Boeing">
+      <option value="b3910">Boeing 737 MAX 10</option>
+      <option value="b738">Boeing 737-800</option>
+    </optgroup>
+  </select>
+</div>
+
 <details>
-  <summary id="acSum">Aereo: Airbus A380-800</summary>
+  <summary id="acSum">Dettagli aereo: Airbus A380-800</summary>
   <div class="in">
-    <div style="margin-bottom:10px"><label>Aereo</label>
-      <select id="ac">
-        <option value="a388">Airbus A380-800</option>
-        <option value="a339">Airbus A330-900neo</option>
-        <option value="a338">Airbus A330-800neo</option>
-      </select></div>
     <div style="margin-bottom:10px"><label>Motore</label>
       <select id="eng"></select></div>
     <div class="info">
@@ -167,7 +176,11 @@ const AC={
   a339:{n:'A330-900neo',full:'Airbus A330-900neo',cap:440,rng:12130,rwy:9950,cc:0.16,price:218630936,chkC:4372618,chkH:510,
     eng:{def:{n:'Motore standard',spd:801,fc:13.00,def:true}}},
   a338:{n:'A330-800neo',full:'Airbus A330-800neo',cap:406,rng:13900,rwy:9500,cc:0.15,price:85325684,chkC:3413028,chkH:510,
-    eng:{def:{n:'Motore standard',spd:801,fc:12.00,def:true}}}
+    eng:{def:{n:'Motore standard',spd:801,fc:12.00,def:true}}},
+  b3910:{n:'737 MAX 10',full:'Boeing 737 MAX 10',cap:225,rng:7000,rwy:7600,cc:0.10,price:19649600,chkC:800000,chkH:450,
+    eng:{def:{n:'Motore standard',spd:881,fc:7.21,def:true}}},
+  b738:{n:'737-800',full:'Boeing 737-800',cap:184,rng:7000,rwy:7550,cc:0.12,price:4407858,chkC:462826,chkH:470,
+    eng:{def:{n:'Motore standard',spd:725,fc:9.40,def:true}}}
 };
 const curAc=()=>AC[$('ac').value]||AC.a388;
 const ENGOF=()=>curAc().eng;
@@ -191,9 +204,7 @@ function applyEngine(){
 }
 function updateAcLabel(){
   const a=curAc(), e=ENGOF()[$('eng').value];
-  $('acSum').textContent=`Aereo: ${a.n} · ${e.n} · ${num('spd')} km/h · ${num('fc')} lbs/km`;
-  $('ttl').textContent=`✈️ Configurazione ${a.n} per tratta`;
-  document.title=`AM4 – Configurazione ${a.n} per tratta`;
+  $('acSum').textContent=`Dettagli: ${a.n} · ${e.n} · ${num('spd')} km/h · ${num('fc')} lbs/km`;
   $('infoSpd').textContent=num('spd');
 }
 function prices(){
