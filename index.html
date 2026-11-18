@@ -57,7 +57,7 @@
 </head>
 <body>
 <h1 id="ttl">✈️ Configurazione A380-800 per tratta</h1>
-<div class="sub">Configurazione fissa per tratta, calcolata sulla domanda: la imposti una volta e non la tocchi più, con o senza marketing.</div>
+<div class="sub">Configurazione fissa per tratta, con tutte le classi nello stesso rapporto della domanda: la imposti una volta e non la tocchi più, con o senza marketing.</div>
 
 <details>
   <summary id="acSum">Aereo: Airbus A380-800</summary>
@@ -260,32 +260,46 @@ function breakEven(f,L,p){
 }
 const sumBy=(planes,f,L,p,k)=>planes.reduce((t,x)=>t+econ(x.s,f,L,p)[k],0);
 
-// configurazione fissa: calcolata sulla domanda piena (100%), indipendente dal marketing
+// configurazione fissa: calcolata sulla domanda piena (100%), indipendente dal marketing.
+// Ogni aereo ha tutte le classi nello stesso rapporto della domanda (Y:J:F).
 const pct=(id,def)=>Math.min(1,Math.max(0.01,(num(id)||def)/100));
 function loads(){return {mkLo:pct('mkLo',92),mkHi:pct('mkHi',99),nmLo:pct('nmLo',45)};}
+const CL=['F','J','Y'];
 function solve(){
   const d={F:num('dF'),J:num('dJ'),Y:num('dY')};
   const mY=num('mY')||1, mJ=num('mJ')||1, mF=num('mF')||1;
   const {f}=flights();
   const R=$('rnd').value==='ceil'?Math.ceil:Math.floor;
   const w={F:mY/mF,J:mY/mJ,Y:1}, rem={...d}, planes=[];
+  const units=s=>CL.reduce((t,c)=>t+s[c]*w[c],0);
   let guard=0;
-  while((rem.F>0||rem.J>0||rem.Y>0)&&guard++<500){
-    let cap=mY; const s={F:0,J:0,Y:0};
-    for(const c of ['F','J','Y']){
-      if(rem[c]<=0) continue;
-      s[c]=Math.max(0,Math.min(Math.floor(cap/w[c]+EPS),R(rem[c]/f-EPS)));
-      cap-=s[c]*w[c];
-      rem[c]=Math.max(0,rem[c]-s[c]*f);
+  while(CL.some(c=>rem[c]>EPS)&&guard++<500){
+    const U=CL.reduce((t,c)=>t+rem[c]*w[c],0)/f; // posti-economy necessari per volo
+    let s={F:0,J:0,Y:0};
+    if(U<=mY+EPS){
+      // ultimo aereo: copre la domanda rimasta
+      for(const c of CL) s[c]=Math.max(0,R(rem[c]/f-EPS));
+      // se l'arrotondamento per eccesso sfora la capienza, togli un posto alla volta (prima Y, poi J, poi F)
+      while(units(s)>mY+EPS){const c=['Y','J','F'].find(c=>s[c]>0); if(!c) break; s[c]--;}
+    }else{
+      // aereo pieno: stessa proporzione della domanda rimasta
+      const t={}; for(const c of CL){t[c]=rem[c]/f*mY/U; s[c]=Math.floor(t[c]+EPS);}
+      // riempi lo spazio avanzato dando posti alle classi più "arrotondate per difetto"
+      let free=mY-units(s);
+      const order=[...CL].sort((x,y)=>(t[y]-s[y])-(t[x]-s[x]));
+      for(const c of order) if(rem[c]>EPS&&w[c]<=free+EPS){s[c]++;free-=w[c];}
+      // eventuale avanzo: altri posti dove la domanda c'è ancora (prima i più piccoli)
+      for(const c of ['Y','J','F']) while(free+EPS>=w[c]&&rem[c]-s[c]*f>EPS){s[c]++;free-=w[c];}
     }
     if(s.F+s.J+s.Y===0) break;
-    const used=mY-cap;
-    planes.push({s,used,pct:used/mY*100,rem:{...rem}});
+    for(const c of CL) rem[c]=Math.max(0,rem[c]-s[c]*f);
+    const used=units(s), freeY=Math.floor(mY-used+EPS);
+    planes.push({s,used,pct:used/mY*100,free:freeY,full:freeY<1,rem:{...rem}});
   }
   // l'ultimo aereo parziale resta solo se guadagna anche col marketing al minimo
   let dropped=null;
   const pr=prices(), last=planes[planes.length-1];
-  if(pr&&last&&last.pct<99.95){
+  if(pr&&last&&!last.full){
     const e=econ(last.s,f,loads().mkLo,pr);
     if(e&&(e.net<=0||e.pay>(num('maxPay')||Infinity))){dropped={...last,e};planes.pop();}
   }
@@ -310,7 +324,7 @@ function calc(){
   const pr=prices(), Ld=loads(), P=x=>Math.round(x*100)+'%';
   const {planes,w,mY,f,dropped}=solve();
   $('sPlanes').textContent=planes.length;
-  $('sFull').textContent=planes.filter(p=>p.pct>=99.95).length;
+  $('sFull').textContent=planes.filter(p=>p.full).length;
   $('sFlights').textContent=num('km')?f:'–';
   const ok=pr&&planes.length;
   const T=L=>sumBy(planes,f,L,pr,'net');
@@ -327,12 +341,12 @@ function calc(){
     </div>`:'<div class="meta">Inserisci la distanza per vedere i prezzi.</div>';
 
   $('planes').innerHTML=planes.map((p,i)=>{
-    const isPart=p.pct<99.95;
+    const isPart=!p.full;
     const bw=c=>(p.s[c]*w[c]/mY*100).toFixed(2);
     const r=p.rem;
     const left=(r.F||r.J||r.Y)?`Domanda residua dopo: Y ${Math.round(r.Y)} · J ${Math.round(r.J)} · F ${Math.round(r.F)}`:'Domanda esaurita ✓';
     return `<div class="plane ${isPart?'part':''}">
-      <div class="ph"><b>Aereo ${i+1}</b><span class="tag">${isPart?'parziale '+p.pct.toFixed(0)+'%':'pieno'}</span></div>
+      <div class="ph"><b>Aereo ${i+1}</b><span class="tag">${isPart?`parziale · ${Math.floor(p.pct)}% (${p.free} posti Y liberi)`:'pieno'}</span></div>
       <div class="seats">
         <div><div class="v Y">${p.s.Y}</div><div class="k">Economy</div></div>
         <div><div class="v J">${p.s.J}</div><div class="k">Business</div></div>
@@ -344,7 +358,7 @@ function calc(){
   }).join('');
 
   $('gains').innerHTML=pr?planes.map((p,i)=>{
-    const isPart=p.pct<99.95;
+    const isPart=!p.full;
     const E=L=>econ(p.s,f,L,pr);
     const col=v=>`<b style="color:${v>=0?'var(--y)':'var(--bad)'}">${money(v)}</b>`;
     const e1=E(Ld.mkLo);
