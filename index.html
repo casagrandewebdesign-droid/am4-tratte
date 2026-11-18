@@ -72,7 +72,7 @@
   <h1>✈️ AM4 Configuratore Tratte</h1>
   <button id="setBtn" aria-label="Impostazioni" style="font-size:1.2rem;padding:6px 12px">⚙️</button>
 </div>
-<div class="sub">Scegli aereo e hub: le tratte migliori si calcolano da sole. Tocca una tratta per vedere posti, prezzi e guadagni.</div>
+<div class="sub">Scegli aereo e hub: le tratte migliori si calcolano da sole. Tocca una tratta per vedere i prezzi consigliati.</div>
 
 <div class="card" style="padding:12px 14px">
   <label>Aereo</label>
@@ -501,7 +501,12 @@ function renderBest(){
     return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
       <div class="t"><b>${esc(apCode(r.j))} · ${esc(APS[r.j][2])}</b><b style="color:${col}">${money(r.net)}/g</b></div>
       <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g · domanda <span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></div>
-      <div class="meta">Config. 1° aereo ${r.s.Y}/${r.s.J}/${r.s.F} · ${Math.max(1,Math.floor(r.planes))} ${Math.max(1,Math.floor(r.planes))===1?'aereo':'aerei'} da mettere${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
+      <div class="seats" style="margin:10px 0 6px">
+        <div><div class="v Y">${r.s.Y}</div><div class="k">Economy</div></div>
+        <div><div class="v J">${r.s.J}</div><div class="k">Business</div></div>
+        <div><div class="v F">${r.s.F}</div><div class="k">Prima</div></div>
+      </div>
+      <div class="meta" style="text-align:center">${Math.max(1,Math.floor(r.planes))} ${Math.max(1,Math.floor(r.planes))===1?'aereo':'aerei'} da mettere${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
     </div>`;}).join('');
   if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
 }
