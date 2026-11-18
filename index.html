@@ -100,6 +100,7 @@
     <div class="dEasy"><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
     <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option><option value="n">Aerei su tratta</option></select></div>
     <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+    <div><label>Aerei su tratta (minimo)</label><select id="bMinN" class="keep"><option value="1">Tutti</option><option value="2">almeno 2</option><option value="3">almeno 3</option><option value="4">almeno 4</option><option value="5">almeno 5</option><option value="6">almeno 6</option><option value="8">almeno 8</option><option value="10">almeno 10</option></select></div>
     <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
   </div>
   <div id="bOut" style="margin-top:6px"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
@@ -494,9 +495,10 @@ async function findBest(){
 function renderBest(){
   parkDetail();
   const res=lastRes, key=lastKey, out=$('bOut'), a=curAc();
-  const top=res.slice(0,+$('bN').value);
+  const minN=+$('bMinN').value||1, pool=res.filter(r=>r.n>=minN);
+  const top=pool.slice(0,+$('bN').value);
   if(!top.length){out.innerHTML=`<div class="warn">Nessuna tratta trovata con questi filtri.</div>`;return;}
-  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(res.length)} destinazioni valide da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}.</div>`+top.map(r=>{
+  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${minN>1?` con almeno ${minN} aerei`:''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
     return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
@@ -542,7 +544,7 @@ async function loadData(){
 setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
-['ac','eng','mode','flo','rnd','bSort','bN'].forEach(id=>$(id).addEventListener('change',autoBest));
+['ac','eng','mode','flo','rnd','bSort','bN','bMinN'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{
   if(e.target.closest('#detail')) return;
