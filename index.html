@@ -66,6 +66,7 @@
       <select id="ac">
         <option value="a388">Airbus A380-800</option>
         <option value="a339">Airbus A330-900neo</option>
+        <option value="a338">Airbus A330-800neo</option>
       </select></div>
     <div style="margin-bottom:10px"><label>Motore</label>
       <select id="eng"></select></div>
@@ -176,7 +177,9 @@ const AC={
   a388:{n:'A380-800',full:'Airbus A380-800',cap:600,rng:14500,rwy:9680,cc:0.16,price:215629503,chkC:12937770,chkH:450,
     eng:{gp:{n:'GP7270',spd:964,fc:22.89,def:true},t970:{n:'RR Trent 970',spd:917,fc:18.9},t972:{n:'RR Trent 972',spd:1049,fc:22.26}}},
   a339:{n:'A330-900neo',full:'Airbus A330-900neo',cap:440,rng:12130,rwy:9950,cc:0.16,price:218630936,chkC:4372618,chkH:510,
-    eng:{def:{n:'Motore standard',spd:801,fc:13.00,def:true}}}
+    eng:{def:{n:'Motore standard',spd:801,fc:13.00,def:true}}},
+  a338:{n:'A330-800neo',full:'Airbus A330-800neo',cap:406,rng:13900,rwy:9500,cc:0.15,price:85325684,chkC:3413028,chkH:510,
+    eng:{def:{n:'Motore standard',spd:801,fc:12.00,def:true}}}
 };
 const curAc=()=>AC[$('ac').value]||AC.a388;
 const ENGOF=()=>curAc().eng;
