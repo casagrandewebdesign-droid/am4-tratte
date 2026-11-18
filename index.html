@@ -119,13 +119,18 @@
 </div>
 
 <div class="card">
-  <h2>2 · Guadagni</h2>
+  <h2>2 · Prezzi consigliati</h2>
+  <div id="prices"><div class="meta">Inserisci la distanza per vedere i prezzi.</div></div>
+  <div class="ex">Prezzo automatico × 1,10 (Economy) · 1,08 (Business) · 1,06 (Prima), meno 5 $ e arrotondato per difetto. I guadagni sotto usano questi prezzi.</div>
+</div>
+
+<div class="card">
+  <h2>3 · Guadagni</h2>
   <div class="sum">
     <div style="grid-column:span 2"><div class="n" id="sProfit" style="color:var(--y);font-size:1.3rem">–</div><div class="l">profitto tratta/giorno con marketing</div></div>
     <div><div class="n" id="sProfitR" style="font-size:1.3rem">–</div><div class="l" id="sProfitRl">senza marketing</div></div>
   </div>
   <div id="mInfo" class="eco" style="text-align:center;margin-top:10px"></div>
-  <div id="prices" style="margin-top:12px"></div>
   <div id="gains"></div>
 </div>
 
@@ -178,7 +183,12 @@ function updateAcLabel(){
 function prices(){
   const km=num('km'); if(!km) return null;
   const P=PRICE[$('mode').value], o={};
-  for(const c of ['Y','J','F']) o[c]=Math.floor((P[c][0]*km+P[c][1])*OPT[c]);
+  o.auto={};
+  for(const c of ['Y','J','F']){
+    const a=P[c][0]*km+P[c][1];
+    o.auto[c]=Math.round(a);
+    o[c]=Math.max(0,Math.floor(a*OPT[c]-5));
+  }
   return o;
 }
 // tempo di volo e voli possibili nelle 24 ore
@@ -286,9 +296,10 @@ function calc(){
   $('mInfo').innerHTML=ok?`Investimento ${M(planes.length*num('acP'))} · rientro tratta in ${days(planes.length*num('acP')/T(Ld.mkLo))}<br>A-check ogni ${mt.between.toFixed(1)} giorni, fermo ${(mt.down*24).toFixed(0)} ore (aereo operativo ${(mt.avail*100).toFixed(1)}% del tempo)`:'';
 
   $('prices').innerHTML=pr?`<div class="seats">
-    <div><div class="v Y" style="font-size:1.1rem">${money(pr.Y)}</div><div class="k">biglietto Economy</div></div>
-    <div><div class="v J" style="font-size:1.1rem">${money(pr.J)}</div><div class="k">biglietto Business</div></div>
-    <div><div class="v F" style="font-size:1.1rem">${money(pr.F)}</div><div class="k">biglietto Prima</div></div></div>`:'';
+    ${[['Y','Economy'],['J','Business'],['F','Prima']].map(([c,n])=>`<div>
+      <div class="v ${c}">${money(pr[c])}</div><div class="k">${n}</div>
+      <div class="k" style="margin-top:2px">auto ${money(pr.auto[c])}</div></div>`).join('')}
+    </div>`:'<div class="meta">Inserisci la distanza per vedere i prezzi.</div>';
 
   $('planes').innerHTML=planes.map((p,i)=>{
     const isPart=p.pct<99.95;
