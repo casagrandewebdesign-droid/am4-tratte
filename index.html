@@ -56,22 +56,23 @@
 </style>
 </head>
 <body>
-<h1>✈️ Configurazione A380-800 per tratta</h1>
+<h1 id="ttl">✈️ Configurazione A380-800 per tratta</h1>
 <div class="sub">Configurazione fissa per tratta, calcolata sulla domanda: la imposti una volta e non la tocchi più, con o senza marketing.</div>
 
 <details>
   <summary id="acSum">Aereo: Airbus A380-800</summary>
   <div class="in">
-    <div style="margin-bottom:10px"><label>Motore</label>
-      <select id="eng">
-        <option value="gp">GP7270 (default) · 964 km/h · 22,89 lbs/km</option>
-        <option value="t970">RR Trent 970 · 917 km/h · 18,9 lbs/km</option>
-        <option value="t972">RR Trent 972 · 1049 km/h · 22,26 lbs/km</option>
+    <div style="margin-bottom:10px"><label>Aereo</label>
+      <select id="ac">
+        <option value="a388">Airbus A380-800</option>
+        <option value="a339">Airbus A330-900neo</option>
       </select></div>
+    <div style="margin-bottom:10px"><label>Motore</label>
+      <select id="eng"></select></div>
     <div class="info">
-      <div><div class="v">14.500</div><div class="k">autonomia km</div></div>
+      <div><div class="v" id="infoRng">14.500</div><div class="k">autonomia km</div></div>
       <div><div class="v" id="infoSpd">964</div><div class="k">km/h crociera</div></div>
-      <div><div class="v">9.680</div><div class="k">pista ft</div></div>
+      <div><div class="v" id="infoRwy">9.680</div><div class="k">pista ft</div></div>
     </div>
     <div class="grid">
       <div><label class="Y">Max Economy</label><input id="mY" type="number" inputmode="numeric" value="600"></div>
@@ -170,14 +171,38 @@ const PRICE={R:{Y:[0.3,150],J:[0.6,500],F:[0.9,1000]},E:{Y:[0.4,170],J:[0.8,560]
 const OPT={Y:1.1,J:1.08,F:1.06};
 const money=v=>'$'+Math.round(v).toLocaleString('it-IT');
 
-const ENG={gp:{n:'GP7270',spd:964,fc:22.89},t970:{n:'RR Trent 970',spd:917,fc:18.9},t972:{n:'RR Trent 972',spd:1049,fc:22.26}};
+// aerei: capacità in posti economy (business = 2 posti, prima = 3 posti)
+const AC={
+  a388:{n:'A380-800',full:'Airbus A380-800',cap:600,rng:14500,rwy:9680,cc:0.16,price:215629503,chkC:12937770,chkH:450,
+    eng:{gp:{n:'GP7270',spd:964,fc:22.89,def:true},t970:{n:'RR Trent 970',spd:917,fc:18.9},t972:{n:'RR Trent 972',spd:1049,fc:22.26}}},
+  a339:{n:'A330-900neo',full:'Airbus A330-900neo',cap:440,rng:12130,rwy:9950,cc:0.16,price:218630936,chkC:4372618,chkH:510,
+    eng:{def:{n:'Motore standard',spd:801,fc:13.00,def:true}}}
+};
+const curAc=()=>AC[$('ac').value]||AC.a388;
+const ENGOF=()=>curAc().eng;
+const it=n=>n.toLocaleString('it-IT');
+function fillEngines(sel){
+  const E=ENGOF();
+  $('eng').innerHTML=Object.entries(E).map(([k,e])=>`<option value="${k}">${e.n}${e.def&&Object.keys(E).length>1?' (default)':''} · ${e.spd} km/h · ${String(e.fc).replace('.',',')} lbs/km</option>`).join('');
+  if(sel&&E[sel]) $('eng').value=sel;
+}
+function applyAircraft(){
+  const a=curAc();
+  $('mY').value=a.cap; $('mJ').value=Math.floor(a.cap/2); $('mF').value=Math.floor(a.cap/3);
+  $('rng').value=a.rng; $('cc').value=a.cc; $('acP').value=a.price; $('chkC').value=a.chkC; $('chkH').value=a.chkH;
+  $('infoRng').textContent=it(a.rng); $('infoRwy').textContent=it(a.rwy);
+  let sv=null; try{sv=localStorage.getItem('am4eng_'+$('ac').value)}catch(e){}
+  fillEngines(sv); applyEngine();
+}
 function applyEngine(){
-  const e=ENG[$('eng').value];
+  const e=ENGOF()[$('eng').value];
   $('spd').value=e.spd; $('fc').value=e.fc;
 }
 function updateAcLabel(){
-  const e=ENG[$('eng').value];
-  $('acSum').textContent=`Aereo: A380-800 · ${e.n} · ${num('spd')} km/h · ${num('fc')} lbs/km`;
+  const a=curAc(), e=ENGOF()[$('eng').value];
+  $('acSum').textContent=`Aereo: ${a.n} · ${e.n} · ${num('spd')} km/h · ${num('fc')} lbs/km`;
+  $('ttl').textContent=`✈️ Configurazione ${a.n} per tratta`;
+  document.title=`AM4 – Configurazione ${a.n} per tratta`;
   $('infoSpd').textContent=num('spd');
 }
 function prices(){
@@ -341,8 +366,14 @@ function calc(){
   $('warn').innerHTML=w2.join('<br>');
 }
 
-try{const sv=localStorage.getItem('am4eng');if(sv&&ENG[sv]){$('eng').value=sv;applyEngine();}}catch(e){}
-$('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('am4eng',$('eng').value)}catch(e){}updateAcLabel();});
+try{
+  const a=localStorage.getItem('am4ac'); if(a&&AC[a]) $('ac').value=a;
+  // migra la vecchia scelta motore dell'A380
+  const old=localStorage.getItem('am4eng'); if(old&&!localStorage.getItem('am4eng_a388')) localStorage.setItem('am4eng_a388',old);
+}catch(e){}
+applyAircraft();
+$('ac').addEventListener('change',()=>{try{localStorage.setItem('am4ac',$('ac').value)}catch(e){}applyAircraft();calc();});
+$('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('am4eng_'+$('ac').value,$('eng').value)}catch(e){}updateAcLabel();});
 ['spd','fc'].forEach(id=>$(id).addEventListener('input',updateAcLabel));
 $('go').addEventListener('click',()=>{if(document.activeElement)document.activeElement.blur();calc();$('sPlanes').scrollIntoView({behavior:'smooth',block:'center'});});
 document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();$('go').click();}}));
