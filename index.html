@@ -80,6 +80,10 @@
       <option value="b738">Boeing 737-800</option>
     </optgroup>
   </select>
+  <div class="row2">
+    <div class="ap"><label>Hub</label><input id="hub" autocomplete="off" autocapitalize="characters" placeholder="es. FCO"><div class="sug" id="hubS"></div></div>
+    <div><label>Modalità</label><select id="mode"><option value="R">Realism</option><option value="E">Easy</option></select></div>
+  </div>
 </div>
 
 <details>
@@ -109,14 +113,28 @@
 </details>
 
 <div class="card">
+  <h2>🔎 Tratte migliori dall'hub</h2>
+  <div id="bOut"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
+  <details style="margin:10px 0 0;background:var(--bg)">
+    <summary>Filtri</summary>
+    <div class="in">
+      <div class="row2" style="margin-top:0">
+        <div><label>Distanza minima (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
+        <div><label>Distanza massima (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
+        <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto al giorno per aereo</option><option value="fleet">Profitto totale tratta (tutti gli aerei)</option><option value="trip">Profitto per volo</option></select></div>
+        <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
+      </div>
+    </div>
+  </details>
+  <div class="ex">Solo voli diretti, piste controllate in Realism. Netto = ricavi − carburante − CO₂ − A-check, col marketing al minimo. Voli al giorno, cost index e prezzi dalle impostazioni avanzate. Tocca una tratta per vedere configurazione e guadagni.</div>
+</div>
+
+<div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <h2 style="margin:0">Tratta</h2><button id="clr" style="padding:6px 12px;font-size:.8rem">🧹 Pulisci</button>
+    <h2 style="margin:0">Tratta scelta</h2><button id="clr" style="padding:6px 12px;font-size:.8rem">🧹 Pulisci</button>
   </div>
-  <div class="row2" style="margin-top:0;margin-bottom:6px">
-    <div class="ap"><label>Hub (partenza)</label><input id="hub" autocomplete="off" autocapitalize="characters" placeholder="es. FCO"><div class="sug" id="hubS"></div></div>
-    <div class="ap"><label>Destinazione</label><input id="dst" autocomplete="off" autocapitalize="characters" placeholder="IATA, ICAO o città"><div class="sug" id="dstS"></div></div>
-  </div>
-  <div id="apInfo" class="meta" style="margin-bottom:10px">Scegli hub e destinazione: domanda e distanza si compilano da sole.</div>
+  <div class="ap" style="margin-bottom:6px"><label>Destinazione (o tocca una tratta qui sopra)</label><input id="dst" autocomplete="off" autocapitalize="characters" placeholder="IATA, ICAO o città"><div class="sug" id="dstS"></div></div>
+  <div id="apInfo" class="meta" style="margin-bottom:10px">Domanda e distanza si compilano da sole; puoi anche scriverle a mano.</div>
   <div class="grid">
     <div><label class="Y">Domanda Economy</label><input id="dY" type="number" min="0" inputmode="numeric" placeholder="0"></div>
     <div><label class="J">Domanda Business</label><input id="dJ" type="number" min="0" inputmode="numeric" placeholder="0"></div>
@@ -124,26 +142,10 @@
   </div>
   <div class="row2">
     <div><label>Distanza (km)</label><input id="km" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-    <div><label>Modalità</label><select id="mode"><option value="R">Realism</option><option value="E">Easy</option></select></div>
   </div>
   <button id="go" style="width:100%;margin-top:12px;padding:14px;font-size:1rem;font-weight:600;background:var(--j);color:#fff;border:none">Calcola tratta</button>
   <div id="ops" style="margin-top:10px"></div>
 </div>
-
-<details id="bestBox">
-  <summary>🔎 Tratte migliori dall'hub per questo aereo</summary>
-  <div class="in">
-    <div class="row2" style="margin-top:0">
-      <div><label>Distanza minima (km)</label><input id="bMin" type="number" inputmode="numeric" value="1000"></div>
-      <div><label>Distanza massima (km, vuoto = autonomia)</label><input id="bMax" type="number" inputmode="numeric" placeholder="autonomia"></div>
-      <div><label>Ordina per</label><select id="bSort"><option value="day">Profitto al giorno per aereo</option><option value="fleet">Profitto totale tratta (tutti gli aerei)</option><option value="trip">Profitto per volo</option></select></div>
-      <div><label>Risultati</label><select id="bN"><option>20</option><option selected>40</option><option>100</option></select></div>
-    </div>
-    <button id="bGo" style="width:100%;margin-top:12px;padding:12px;font-weight:600;background:var(--y);color:#fff;border:none">Trova tratte</button>
-    <div class="ex">Solo voli diretti (niente scali), piste controllate in Realism. Netto = ricavi − carburante − CO₂ − A-check, col marketing al minimo impostato. Usa i voli al giorno e il cost index delle impostazioni avanzate. Tocca una tratta per configurarla.</div>
-    <div id="bOut"></div>
-  </div>
-</details>
 
 <div class="card">
   <h2>1 · Configurazione della tratta</h2>
@@ -524,7 +526,7 @@ async function findBest(){
   out.innerHTML=`<div class="meta" style="margin-top:10px">${it(res.length)} destinazioni valide da ${esc(apCode(hubIdx))} con ${esc(a.n)}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
-    return `<div class="best" data-j="${r.j}">
+    return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
       <div class="t"><b>${esc(apCode(r.j))} · ${esc(APS[r.j][2])}</b><b style="color:${col}">${money(r.net)}/g</b></div>
       <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g · domanda <span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></div>
       <div class="meta">Config. 1° aereo ${r.s.Y}/${r.s.J}/${r.s.F} · la domanda riempie ~${r.planes.toLocaleString('it-IT',{maximumFractionDigits:1})} aerei${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
@@ -555,19 +557,23 @@ async function loadData(){
     let saved=null; try{saved=localStorage.getItem('am4ac');}catch(e){}
     if(saved&&AC[saved]&&saved!==cur){sel.value=saved;applyAircraft();calc();}
     let h=null; try{h=localStorage.getItem('am4hub');}catch(e){}
-    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);}
+    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();}
   }catch(e){$('apInfo').innerHTML='<span class="bad">Dati aeroporti non disponibili: puoi comunque inserire domanda e distanza a mano.</span>';}
 }
-setupAp('hub','hubS',i=>{hubIdx=i;try{localStorage.setItem('am4hub',i)}catch(e){}fillRoute();});
+setupAp('hub','hubS',i=>{hubIdx=i;try{localStorage.setItem('am4hub',i)}catch(e){}fillRoute();findBest();});
 setupAp('dst','dstS',i=>{dstIdx=i;fillRoute();});
-$('bGo').addEventListener('click',findBest);
+let bT=null;
+const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
+['ac','eng','mode','flo','rnd','bSort','bN'].forEach(id=>$(id).addEventListener('change',autoBest));
+['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{
   const d=e.target.closest('[data-j]'); if(!d) return;
   dstIdx=+d.dataset.j; $('dst').value=apLabel(dstIdx);
+  document.querySelectorAll('#bOut .best').forEach(x=>x.style.borderColor=x===d?'var(--j)':'');
   fillRoute().then(()=>$('sPlanes').scrollIntoView({behavior:'smooth',block:'center'}));
 });
 // impostazioni costi ricordate
-document.querySelectorAll('input.keep').forEach(el=>{
+document.querySelectorAll('.keep').forEach(el=>{
   try{const v=localStorage.getItem('am4_'+el.id); if(v!=null) el.value=v;}catch(e){}
   el.addEventListener('change',()=>{try{localStorage.setItem('am4_'+el.id,el.value)}catch(e){}calc();});
 });
@@ -584,7 +590,7 @@ $('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('
 ['spd','fc'].forEach(id=>$(id).addEventListener('input',updateAcLabel));
 $('go').addEventListener('click',()=>{if(document.activeElement)document.activeElement.blur();calc();$('sPlanes').scrollIntoView({behavior:'smooth',block:'center'});});
 document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();$('go').click();}}));
-$('clr').addEventListener('click',()=>{['dY','dJ','dF','km','dst'].forEach(id=>$(id).value='');dstIdx=null;$('apInfo').textContent='Scegli hub e destinazione: domanda e distanza si compilano da sole.';calc();$('dst').focus();});
+$('clr').addEventListener('click',()=>{['dY','dJ','dF','km','dst'].forEach(id=>$(id).value='');dstIdx=null;$('apInfo').textContent='Domanda e distanza si compilano da sole; puoi anche scriverle a mano.';calc();$('dst').focus();});
 calc();
 loadData();
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
