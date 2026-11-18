@@ -96,11 +96,10 @@
 <div class="card">
   <h2>🔎 Tratte migliori dall'hub</h2>
   <div class="row2" style="margin-top:0">
-    <div><label>Distanza min (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
-    <div><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
+    <div class="dEasy"><label>Distanza min (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
+    <div class="dEasy"><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
     <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option></select></div>
     <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-    <div><label>Cerca</label><input id="bQ" type="search" autocomplete="off" placeholder="codice, città, paese"></div>
     <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
   </div>
   <div id="bOut" style="margin-top:6px"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
@@ -110,28 +109,11 @@
 <!-- dettaglio della tratta: viene spostato dentro la tratta toccata -->
 <div id="detailHome" style="display:none">
  <div id="detail" class="det">
-  <div id="apInfo" class="meta"></div>
-  <div id="ops" style="margin-top:6px"></div>
-  <h3>Configurazione</h3>
-  <div class="sum">
-    <div><div class="n" id="sPlanes">–</div><div class="l">aerei da mettere</div></div>
-    <div><div class="n" id="sFlights">–</div><div class="l">voli/giorno ciascuno</div></div>
-    <div><div class="n" id="sFull">–</div><div class="l">pieni al 100%</div></div>
-  </div>
-  <div id="planes"></div>
-  <div id="warn" class="warn"></div>
-  <h3>Prezzi consigliati</h3>
+  <h3 style="margin-top:4px">Prezzi consigliati</h3>
   <div id="prices"></div>
-  <div class="ex">Prezzo automatico × 1,10 (Y) · 1,08 (J) · 1,06 (F), meno 5 $ e arrotondato per difetto.</div>
-  <h3>Guadagni</h3>
-  <div class="sum">
-    <div style="grid-column:span 2"><div class="n" id="sProfit" style="color:var(--y);font-size:1.2rem">–</div><div class="l">profitto tratta/giorno con marketing</div></div>
-    <div><div class="n" id="sProfitR" style="font-size:1.2rem">–</div><div class="l" id="sProfitRl">senza marketing</div></div>
-  </div>
-  <div id="mInfo" class="eco" style="text-align:center;margin-top:10px"></div>
-  <div id="gains"></div>
-  <div class="ex">Totali = ricavi − A-check; per ogni aereo anche il netto con carburante e CO₂.</div>
  </div>
+ <div id="apInfo"></div><div id="ops"></div><div id="sPlanes"></div><div id="sFlights"></div><div id="sFull"></div><div id="planes"></div><div id="warn"></div>
+ <div id="sProfit"></div><div id="sProfitR"></div><div id="sProfitRl"></div><div id="mInfo"></div><div id="gains"></div>
  <input id="dY" type="number"><input id="dJ" type="number"><input id="dF" type="number"><input id="km" type="number">
 </div>
 
@@ -486,7 +468,8 @@ async function findBest(){
   out.innerHTML='<div class="meta" style="margin-top:10px">Calcolo…</div>';
   let row; try{row=await demandRow(hubIdx);}catch(e){out.innerHTML=`<div class="bad">${esc(e.message)}</div>`;return;}
   const a=curAc(), cap=num('mY')||1, L=loads().mkLo, fo=$('flo').value;
-  const minKm=Math.max(100,num('bMin')), maxKm=Math.min(num('bMax')||Infinity,num('rng')||Infinity);
+  const R=$('mode').value==='R';
+  const minKm=R?100:Math.max(100,num('bMin')), maxKm=R?(num('rng')||Infinity):Math.min(num('bMax')||Infinity,num('rng')||Infinity);
   if(rwyWarn(hubIdx)){out.innerHTML=`<div class="bad">La pista dell'hub (${it(APS[hubIdx][6])} ft) è troppo corta per ${esc(a.n)}.</div>`;return;}
   const res=[];
   for(let j=0;j<NAP;j++){
@@ -510,17 +493,15 @@ async function findBest(){
 function renderBest(){
   parkDetail();
   const res=lastRes, key=lastKey, out=$('bOut'), a=curAc();
-  const q=$('bQ').value.trim().toUpperCase();
-  const pool=q?res.filter(r=>{const x=APS[r.j];return x[0]===q||x[1]===q||x[0].startsWith(q)||x[2].toUpperCase().includes(q)||x[3].toUpperCase().includes(q);}):res;
-  const top=pool.slice(0,+$('bN').value);
-  if(!top.length){out.innerHTML=`<div class="warn">${q?'Nessuna tratta valida per questa ricerca (fuori filtri, autonomia o pista).':'Nessuna tratta trovata con questi filtri.'}</div>`;return;}
-  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(res.length)} destinazioni valide da ${esc(apCode(hubIdx))} con ${esc(a.n)}.</div>`+top.map(r=>{
+  const top=res.slice(0,+$('bN').value);
+  if(!top.length){out.innerHTML=`<div class="warn">Nessuna tratta trovata con questi filtri.</div>`;return;}
+  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(res.length)} destinazioni valide da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
     return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
       <div class="t"><b>${esc(apCode(r.j))} · ${esc(APS[r.j][2])}</b><b style="color:${col}">${money(r.net)}/g</b></div>
       <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g · domanda <span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></div>
-      <div class="meta">Config. 1° aereo ${r.s.Y}/${r.s.J}/${r.s.F} · la domanda riempie ~${r.planes.toLocaleString('it-IT',{maximumFractionDigits:1})} aerei${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
+      <div class="meta">Config. 1° aereo ${r.s.Y}/${r.s.J}/${r.s.F} · ${Math.max(1,Math.floor(r.planes))} ${Math.max(1,Math.floor(r.planes))===1?'aereo':'aerei'} da mettere${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
     </div>`;}).join('');
   if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
 }
@@ -563,11 +544,10 @@ $('bOut').addEventListener('click',e=>{
   const j=+d.dataset.j;
   if(j===dstIdx&&d.contains($('detail'))){parkDetail();dstIdx=null;markSel();return;}
   dstIdx=j; markSel(); d.appendChild($('detail'));
-  fillRoute().then(()=>d.scrollIntoView({behavior:'smooth',block:'start'}));
+  fillRoute().then(()=>d.scrollIntoView({behavior:'smooth',block:'nearest'}));
 });
 function parkDetail(){$('detailHome').prepend($('detail'));}
 function markSel(){document.querySelectorAll('#bOut .best').forEach(x=>x.style.borderColor=+x.dataset.j===dstIdx?'var(--j)':'');}
-$('bQ').addEventListener('input',()=>{if(lastRes)renderBest();});
 $('setBtn').addEventListener('click',()=>{$('setPanel').style.display='block';document.body.style.overflow='hidden';});
 const closeSet=()=>{$('setPanel').style.display='none';document.body.style.overflow='';if(dstIdx!=null)calc();};
 $('setClose').addEventListener('click',closeSet);
@@ -577,7 +557,9 @@ document.querySelectorAll('.keep').forEach(el=>{
   try{const v=localStorage.getItem('am4_'+el.id); if(v!=null) el.value=v;}catch(e){}
   el.addEventListener('change',()=>{try{localStorage.setItem('am4_'+el.id,el.value)}catch(e){}calc();});
 });
-$('mode').addEventListener('change',()=>{if(hubIdx!=null&&dstIdx!=null)fillRoute();});
+const distVis=()=>document.querySelectorAll('.dEasy').forEach(x=>x.style.display=$('mode').value==='R'?'none':'');
+$('mode').addEventListener('change',()=>{distVis();if(hubIdx!=null&&dstIdx!=null)fillRoute();});
+distVis();
 
 try{
   const a=localStorage.getItem('am4ac'); if(a&&AC[a]) $('ac').value=a;
