@@ -79,7 +79,9 @@
   .cb{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 4px;text-align:center}
   .cl{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
   .cs{font-size:1.6rem;font-weight:800;line-height:1.2;margin:2px 0}
-  .cp{color:var(--y);font-weight:700;font-size:.9rem}
+  .cp{font-weight:700;font-size:.9rem}
+  .cbY{--c:var(--y)} .cbJ{--c:var(--j)} .cbF{--c:var(--f)}
+  .cbY,.cbJ,.cbF{color:var(--c);border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,var(--card))}
   .cd{color:var(--mut);font-size:.72rem;font-weight:600;margin-top:2px}
   .ib{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 8px}
   .ii{display:flex;align-items:center;gap:6px;min-width:0}
@@ -533,15 +535,14 @@ function renderBest(more){
   out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}${fixedF?` · ${$('flo').value} voli/g per tratta`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
-    const cls=(c,n)=>`<div class="cb"><div class="cl ${c}">${n}</div><div class="cs">${r.s[c]}</div><div class="cp">${money(r.p[c])}</div><div class="cd">${it(r.D[c])} domanda</div></div>`;
+    const cls=(c,n)=>`<div class="cb cb${c}"><div class="cl">${n}</div><div class="cs">${r.s[c]}</div><div class="cp">${money(r.p[c])}</div><div class="cd">${it(r.D[c])} domanda</div></div>`;
     return `<div class="best" data-j="${r.j}">
       <div class="hd">
         <div>
-          <div class="pf" style="color:${col}">${money(r.net)}/g</div>
           <div class="cty">${esc(APS[r.j][3])}</div>
           <div class="nm">${esc(APS[r.j][2])} <span class="code">${esc(apCode(r.j))}</span></div>
         </div>
-        <div class="rt">${it(Math.round(r.km))} km${key==='fleet'?`<br>tratta ${money(r.fleet)}/g`:''}${key==='trip'?`<br>${money(r.trip)}/volo`:''}</div>
+        <div class="rt"><div class="pf" style="color:${col}">${money(r.net)}/g</div>${it(Math.round(r.km))} km${key==='fleet'?`<br>tratta ${money(r.fleet)}/g`:''}${key==='trip'?`<br>${money(r.trip)}/volo`:''}</div>
       </div>
       <div class="cbs">${cls('Y','Economy')}${cls('J','Business')}${cls('F','Prima')}</div>
       <div class="ib">
