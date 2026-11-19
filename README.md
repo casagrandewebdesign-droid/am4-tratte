@@ -8,3 +8,7 @@ Calcolatore non ufficiale per Airline Manager 4: scegli l'aereo, l'hub e la dest
 Si apre dal browser e si può installare sul telefono ("Aggiungi a schermata Home").
 
 Dati (aeroporti, domanda di tutte le tratte, aerei) e formule dal progetto open-source [abc8747/am4](https://github.com/abc8747/am4), licenza MIT. I risultati sono indicativi.
+
+## Tratte usate (privato)
+
+Con un Google Sheet personale puoi segnare le tratte già usate: la loro domanda viene scalata e la tratta ricompare solo se ne resta abbastanza per un altro aereo. Lo script da incollare nel foglio è in [`apps-script/Code.gs`](apps-script/Code.gs) (istruzioni in testa al file). Il token non è nel repository: senza token il menu non compare e lo script non risponde.

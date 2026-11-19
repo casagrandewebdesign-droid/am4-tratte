@@ -88,6 +88,14 @@
   .ic{flex:none;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center}
   .ik{font-size:.6rem;color:var(--mut);font-weight:700;text-transform:uppercase;line-height:1.15}
   .iv{font-size:.82rem;font-weight:700;white-space:nowrap}
+  .uf{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
+  .uf button{padding:7px 12px;font-size:.82rem}
+  .ued{margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px}
+  .ued input{padding:8px}
+  .urow{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+  .urow .t{display:flex;justify-content:space-between;gap:8px}
+  .urow .code{font-weight:600;font-size:.8rem;color:var(--mut)}
+  button.bad{color:var(--bad)}
 </style>
 </head>
 <body>
@@ -128,6 +136,11 @@
   </div>
   <div id="bOut" style="margin-top:6px"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
   <div class="ex">Solo voli diretti, piste controllate in Realism. Netto = ricavi − carburante − CO₂ − A-check, col marketing al minimo. Cost index e prezzi in ⚙️.</div>
+</div>
+
+<div class="card" id="usedCard" style="display:none">
+  <h2>📒 Tratte usate</h2>
+  <div id="usedOut"></div>
 </div>
 
 <!-- dettaglio della tratta: viene spostato dentro la tratta toccata -->
@@ -181,6 +194,12 @@
       <div style="grid-column:1/-1"><label>Arrotondamento posti</label>
         <select id="rnd"><option value="ceil">Per eccesso (copre tutta la domanda)</option><option value="floor">Per difetto (nessun posto vuoto)</option></select></div>
     </div>
+    <h3>🔒 Le mie tratte (privato)</h3>
+    <div class="meta">Collega il tuo Google Sheet per segnare le tratte usate. Senza token il menu non compare.</div>
+    <div style="margin-top:8px"><label>URL web app (…/exec)</label><input id="syURL" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec"></div>
+    <div style="margin-top:8px"><label>Token</label><input id="syTok" type="password" autocomplete="off"></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button id="syGo" style="flex:1;background:var(--j);color:#fff;border:none">Collega</button><button id="syOff">Scollega</button></div>
+    <div id="syMsg" class="meta" style="margin-top:6px"></div>
   </div>
 </div>
 
@@ -495,21 +514,24 @@ async function findBest(){
   const R=$('mode').value==='R';
   const minKm=R?100:Math.max(100,num('bMin')), maxKm=R?(num('rng')||Infinity):Math.min(num('bMax')||Infinity,num('rng')||Infinity);
   if(rwyWarn(hubIdx)){out.innerHTML=`<div class="bad">La pista dell'hub (${it(APS[hubIdx][6])} ft) è troppo corta per ${esc(a.n)}.</div>`;return;}
-  const res=[];
+  const res=[]; buildUsedMap();
   for(let j=0;j<NAP;j++){
     if(j===hubIdx||rwyWarn(j)) continue;
     const km=dist(hubIdx,j); if(km<minKm||km>maxKm) continue;
     const t=timingFor(km); if(!t||t.max<1) continue;
     const f=fo==='auto'?t.max:+fo; if(f>t.max) continue;
-    const D={Y:row.Y[j],J:row.J[j],F:row.F[j]}, units=D.Y+2*D.J+3*D.F; if(!units) continue;
+    const u=usedMap[APS[j][1]];
+    const D=u?{Y:Math.max(0,row.Y[j]-u.Y),J:Math.max(0,row.J[j]-u.J),F:Math.max(0,row.F[j]-u.F)}:{Y:row.Y[j],J:row.J[j],F:row.F[j]};
+    const units=D.Y+2*D.J+3*D.F; if(!units) continue;
     const U=units/f, k=U>cap?cap/U:1;
     const s={Y:Math.floor(D.Y/f*k),J:Math.floor(D.J/f*k),F:Math.floor(D.F/f*k)};
     const p=pricesFor(km), m=maintFor(t.h,f);
     const rev=(s.Y*p.Y+s.J*p.J+s.F*p.F)*L*f*m.avail;
     const net=rev-m.checkDay-fuelCo2Day(s,km,f,L,m.avail);
     const planes=units/(cap*f);
+    if(u&&Math.floor(planes)<1) continue; // già usata: torna solo se c'è domanda per un altro aereo pieno
     const n=Math.max(1,Math.floor(planes));
-    res.push({j,km,f,h:t.h,D,s,p,net,trip:net/(f*m.avail),planes,n,fleet:net*n});
+    res.push({j,km,f,h:t.h,D,s,p,net,u,trip:net/(f*m.avail),planes,n,fleet:net*n});
   }
   const sv=$('bSort').value, key=sv==='trip'?'trip':sv==='fleet'?'fleet':'net';
   res.sort((x,y)=>(y[key]-x[key])||(y.net-x.net));
@@ -550,13 +572,14 @@ function renderBest(more){
         <div class="ii"><span class="ic" style="background:rgba(188,140,255,.15);color:#bc8cff">${IC.cal}</span><div><div class="ik">Voli / aereo</div><div class="iv">${r.f}x/giorno</div></div></div>
         <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.plane}</span><div><div class="ik">Aerei su tratta</div><div class="iv">${r.n} ${r.n===1?'aereo':'aerei'}</div></div></div>
       </div>
+      ${owner()?`<div class="uf">${r.u?`<span class="meta">✓ già ${r.u.planes} ${r.u.planes===1?'aereo':'aerei'} · domanda residua</span>`:'<span></span>'}<button data-act="use" data-j="${r.j}">${r.u?'＋ Aggiungi aerei':'✓ Segna usata'}</button></div>`:''}
     </div>`;}).join('')
     +(pool.length>top.length?`<button id="bMore" style="width:100%;margin-top:10px;padding:12px;font-weight:600">Carica altre ${Math.min(page,pool.length-top.length)} tratte (${it(top.length)} di ${it(pool.length)})</button>`:`<div class="meta" style="text-align:center;margin-top:10px">Tutte le ${it(pool.length)} tratte mostrate.</div>`);
 }
 async function loadData(){
   try{
     const [ap,ac]=await Promise.all([fetch('data/airports.json').then(r=>r.json()),fetch('data/aircraft.json').then(r=>r.json())]);
-    APS=ap;
+    APS=ap; APS.forEach((x,i)=>I4[x[1]]=i);
     // tutti gli aerei passeggeri del database, raggruppati per costruttore
     const mine={a388:1,a339:1,a338:1,b738:1,b73max10:1}, byKey={};
     for(const [sn,man,name,en,spd,fc,co2,cost,cap,rwy,chk,rng,mnt] of ac){
@@ -578,10 +601,11 @@ async function loadData(){
     let saved=null; try{saved=localStorage.getItem('am4ac');}catch(e){}
     if(saved&&AC[saved]&&saved!==cur){sel.value=saved;applyAircraft();calc();}
     let h=null; try{h=localStorage.getItem('am4hub');}catch(e){}
-    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();}
+    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();renderUsed();}
+    if(owner()) api('list').then(refreshAll).catch(()=>{});
   }catch(e){$('apInfo').innerHTML='<span class="bad">Dati aeroporti non disponibili: puoi comunque inserire domanda e distanza a mano.</span>';}
 }
-setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();});
+setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
 ['ac','eng','mode','flo','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
@@ -593,6 +617,91 @@ $('setBtn').addEventListener('click',()=>{$('setPanel').style.display='block';do
 const closeSet=()=>{$('setPanel').style.display='none';document.body.style.overflow='';if(dstIdx!=null)calc();};
 $('setClose').addEventListener('click',closeSet);
 $('setPanel').addEventListener('click',e=>{if(e.target===$('setPanel'))closeSet();});
+
+// ===== Tratte usate (privato, Google Sheet via Apps Script con token) =====
+let SYNC={url:'',token:''}, USED=[], usedMap={}, I4={};
+try{SYNC=JSON.parse(localStorage.getItem('am4sync'))||SYNC; USED=JSON.parse(localStorage.getItem('am4used'))||[];}catch(e){}
+const owner=()=>!!(SYNC.url&&SYNC.token);
+const hubIcao=()=>hubIdx!=null&&APS?APS[hubIdx][1]:null;
+function buildUsedMap(){
+  usedMap={}; const h=hubIcao(); if(!owner()||!h) return;
+  for(const r of USED){ if(r.hub!==h) continue;
+    const u=usedMap[r.dest]||(usedMap[r.dest]={Y:0,J:0,F:0,planes:0});
+    const k=r.aerei*r.voli; u.Y+=r.y*k; u.J+=r.j*k; u.F+=r.f*k; u.planes+=r.aerei; }
+}
+const normRow=r=>({id:String(r.id),hub:String(r.hub),dest:String(r.dest),aereo:String(r.aereo),aerei:+r.aerei||0,y:+r.y||0,j:+r.j||0,f:+r.f||0,voli:+r.voli||1,note:String(r.note||'')});
+async function api(action,extra){
+  const r=await fetch(SYNC.url,{method:'POST',body:JSON.stringify({token:SYNC.token,action,...(extra||{})})});
+  let j; try{j=await r.json();}catch(e){throw new Error('risposta non valida: controlla l\'URL');}
+  if(!j.ok) throw new Error(j.err==='token'?'token non valido':j.err);
+  USED=j.rows.map(normRow); try{localStorage.setItem('am4used',JSON.stringify(USED));}catch(e){}
+  return USED;
+}
+function refreshAll(){ renderUsed(); if(hubIdx!=null&&APS) findBest(); }
+function editorHTML(v,attrs){
+  const f=(k,l,c)=>`<div><label${c?` class="${c}"`:''}>${l}</label><input data-k="${k}" type="number" min="0" inputmode="numeric" value="${v[k]}"></div>`;
+  return `<div class="ued" ${attrs}>
+    <div class="grid">${f('aerei','Aerei')}${f('voli','Voli/giorno')}<div></div>${f('y','Economy','Y')}${f('j','Business','J')}${f('f','Prima','F')}</div>
+    <div class="meta" style="margin-top:6px">Posti di ciascun aereo. La domanda usata = aerei × posti × voli al giorno.</div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button data-act="save" style="flex:1;background:var(--y);color:#fff;border:none">Salva</button><button data-act="cancel">Annulla</button></div>
+    <div class="meta uerr"></div></div>`;
+}
+const readEd=ed=>{const o={};ed.querySelectorAll('input[data-k]').forEach(i=>o[i.dataset.k]=Math.max(0,Math.floor(+i.value||0)));return o;};
+async function saveEd(ed,fn){
+  const btn=ed.querySelector('[data-act="save"]'); btn.disabled=true; btn.textContent='Salvo…';
+  try{await fn(readEd(ed)); refreshAll();}
+  catch(e){btn.disabled=false; btn.textContent='Salva'; ed.querySelector('.uerr').innerHTML=`<span class="bad">Errore: ${esc(e.message)}</span>`;}
+}
+$('bOut').addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const card=b.closest('.best'), j=+card.dataset.j;
+  if(b.dataset.act==='use'){
+    const r=lastRes.find(x=>x.j===j); if(!r) return;
+    card.querySelector('.uf').outerHTML=editorHTML({aerei:r.n,voli:r.f,y:r.s.Y,j:r.s.J,f:r.s.F},`data-j="${j}"`);
+  }else if(b.dataset.act==='cancel') renderBest();
+  else if(b.dataset.act==='save'){
+    const ed=b.closest('.ued');
+    saveEd(ed,v=>api('add',{row:{hub:hubIcao(),dest:APS[j][1],aereo:$('ac').value,aerei:v.aerei,y:v.y,j:v.j,f:v.f,voli:v.voli||1,note:curAc().full}}));
+  }
+});
+function renderUsed(){
+  const c=$('usedCard'), h=hubIcao();
+  if(!owner()||!h){c.style.display='none';return;}
+  c.style.display='';
+  const rows=USED.filter(r=>r.hub===h).sort((a,b)=>a.dest.localeCompare(b.dest)), other=USED.length-rows.length;
+  $('usedOut').innerHTML=(rows.length?rows.map(r=>{
+    const i=I4[r.dest], name=i!=null?`${esc(APS[i][2])} <span class="code">${esc(apCode(i))}</span>`:esc(r.dest);
+    const ac=AC[r.aereo]?AC[r.aereo].n:(r.note||r.aereo);
+    return `<div class="urow" data-id="${esc(r.id)}">
+      <div class="t"><span><b>${name}</b></span><span class="meta">${esc(ac)} × ${r.aerei}</span></div>
+      <div class="meta"><span class="Y">${r.y}</span> / <span class="J">${r.j}</span> / <span class="F">${r.f}</span> posti · ${r.voli} voli/g</div>
+      <div style="display:flex;gap:8px;margin-top:6px"><button data-act="edit">Modifica</button><button data-act="del" class="bad">Elimina</button></div>
+    </div>`;}).join(''):`<div class="meta">Nessuna tratta usata da ${esc(apCode(hubIdx))}. Usa "✓ Segna usata" sulle schede.</div>`)
+    +(other?`<div class="meta" style="margin-top:8px">Altre ${other} tratte salvate su altri hub.</div>`:'');
+}
+$('usedOut').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const row=b.closest('[data-id]'), id=row&&row.dataset.id, r=USED.find(x=>x.id===id);
+  if(b.dataset.act==='edit'&&r){row.innerHTML+=editorHTML({aerei:r.aerei,voli:r.voli,y:r.y,j:r.j,f:r.f},`data-id="${esc(id)}"`);b.parentElement.remove();}
+  else if(b.dataset.act==='cancel') renderUsed();
+  else if(b.dataset.act==='save'&&r) saveEd(b.closest('.ued'),v=>api('update',{id,row:{...r,aerei:v.aerei,voli:v.voli||1,y:v.y,j:v.j,f:v.f}}));
+  else if(b.dataset.act==='del'&&r){
+    if(!confirm('Eliminare questa tratta dalle usate?')) return;
+    b.disabled=true; try{await api('remove',{id}); refreshAll();}catch(err){b.disabled=false;alert('Errore: '+err.message);}
+  }
+});
+$('syURL').value=SYNC.url; $('syTok').value=SYNC.token;
+$('syMsg').textContent=owner()?'Collegato.':'Non collegato.';
+$('syGo').addEventListener('click',async()=>{
+  const url=$('syURL').value.trim(), token=$('syTok').value.trim();
+  if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)||!token){$('syMsg').innerHTML='<span class="bad">Inserisci URL (…/exec) e token.</span>';return;}
+  $('syMsg').textContent='Collego…'; const prev=SYNC; SYNC={url,token};
+  try{await api('list'); try{localStorage.setItem('am4sync',JSON.stringify(SYNC));}catch(e){}
+    $('syMsg').textContent=`Collegato: ${USED.length} tratte salvate.`; refreshAll();}
+  catch(e){SYNC=prev; $('syMsg').innerHTML=`<span class="bad">Errore: ${esc(e.message)}</span>`;}
+});
+$('syOff').addEventListener('click',()=>{SYNC={url:'',token:''};USED=[];try{localStorage.removeItem('am4sync');localStorage.removeItem('am4used');}catch(e){}
+  $('syURL').value='';$('syTok').value='';$('syMsg').textContent='Non collegato.';refreshAll();});
 // impostazioni costi ricordate
 document.querySelectorAll('.keep').forEach(el=>{
   try{const v=localStorage.getItem('am4_'+el.id); if(v!=null) el.value=v;}catch(e){}
