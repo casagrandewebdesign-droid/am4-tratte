@@ -73,6 +73,19 @@
   .best .rt{font-size:.78rem;color:var(--mut);text-align:right;white-space:nowrap;line-height:1.5}
   .best .ft{display:flex;justify-content:space-between;align-items:flex-end}
   .best .pl{font-size:.95rem}
+  .best{cursor:default}
+  .best .pf{font-weight:700;font-size:1rem}
+  .cbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 8px}
+  .cb{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 4px;text-align:center}
+  .cl{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+  .cs{font-size:1.6rem;font-weight:800;line-height:1.2;margin:2px 0}
+  .cp{color:var(--y);font-weight:700;font-size:.9rem}
+  .cd{color:var(--mut);font-size:.72rem;font-weight:600;margin-top:2px}
+  .ib{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 8px}
+  .ii{display:flex;align-items:center;gap:6px;min-width:0}
+  .ic{flex:none;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+  .ik{font-size:.6rem;color:var(--mut);font-weight:700;text-transform:uppercase;line-height:1.15}
+  .iv{font-size:.82rem;font-weight:700;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -80,7 +93,7 @@
   <h1>✈️ AM4 Configuratore Tratte</h1>
   <button id="setBtn" aria-label="Impostazioni" style="font-size:1.2rem;padding:6px 12px">⚙️</button>
 </div>
-<div class="sub">Scegli aereo e hub: le tratte migliori si calcolano da sole. Tocca una tratta per vedere i prezzi consigliati.</div>
+<div class="sub">Scegli aereo e hub: le tratte migliori si calcolano da sole. Per ogni tratta: posti da configurare, prezzi consigliati e aerei da mettere.</div>
 
 <div class="card" style="padding:12px 14px">
   <label>Aereo</label>
@@ -494,12 +507,17 @@ async function findBest(){
     const net=rev-m.checkDay-fuelCo2Day(s,km,f,L,m.avail);
     const planes=units/(cap*f);
     const n=Math.max(1,Math.floor(planes));
-    res.push({j,km,f,h:t.h,D,s,net,trip:net/(f*m.avail),planes,n,fleet:net*n});
+    res.push({j,km,f,h:t.h,D,s,p,net,trip:net/(f*m.avail),planes,n,fleet:net*n});
   }
   const sv=$('bSort').value, key=sv==='trip'?'trip':sv==='fleet'?'fleet':'net';
   res.sort((x,y)=>(y[key]-x[key])||(y.net-x.net));
   lastRes=res; lastKey=key; renderBest();
 }
+const IC={
+  clock:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  cal:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>',
+  plane:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V8.5l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>'
+};
 let shown=0;
 function renderBest(more){
   parkDetail();
@@ -515,27 +533,24 @@ function renderBest(more){
   out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}${fixedF?` · ${$('flo').value} voli/g per tratta`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
-    return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
+    const cls=(c,n)=>`<div class="cb"><div class="cl ${c}">${n}</div><div class="cs">${r.s[c]}</div><div class="cp">${money(r.p[c])}</div><div class="cd">${it(r.D[c])} domanda</div></div>`;
+    return `<div class="best" data-j="${r.j}">
       <div class="hd">
         <div>
+          <div class="pf" style="color:${col}">${money(r.net)}/g</div>
           <div class="cty">${esc(APS[r.j][3])}</div>
           <div class="nm">${esc(APS[r.j][2])} <span class="code">${esc(apCode(r.j))}</span></div>
-          <div class="dem"><span class="Y">${r.D.Y}</span> / <span class="J">${r.D.J}</span> / <span class="F">${r.D.F}</span></div>
         </div>
-        <div class="rt">${it(Math.round(r.km))} km<br>${hh}h${String(mm).padStart(2,'0')}${fixedF?'':`<br>${r.f} voli/g`}</div>
+        <div class="rt">${it(Math.round(r.km))} km${key==='fleet'?`<br>tratta ${money(r.fleet)}/g`:''}${key==='trip'?`<br>${money(r.trip)}/volo`:''}</div>
       </div>
-      <div class="seats" style="margin:10px 0 8px">
-        <div><div class="v Y">${r.s.Y}</div><div class="k">Economy</div></div>
-        <div><div class="v J">${r.s.J}</div><div class="k">Business</div></div>
-        <div><div class="v F">${r.s.F}</div><div class="k">Prima</div></div>
-      </div>
-      <div class="ft">
-        <span class="pl">✈️ × <b>${r.n}</b></span>
-        <span style="text-align:right"><b style="color:${col};font-size:1.05rem">${money(r.net)}/g</b>${key==='fleet'?`<br><span class="meta">tratta ${money(r.fleet)}/g</span>`:''}${key==='trip'?`<br><span class="meta">${money(r.trip)}/volo</span>`:''}</span>
+      <div class="cbs">${cls('Y','Economy')}${cls('J','Business')}${cls('F','Prima')}</div>
+      <div class="ib">
+        <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.clock}</span><div><div class="ik">Durata</div><div class="iv">~${hh}h ${String(mm).padStart(2,'0')}m</div></div></div>
+        <div class="ii"><span class="ic" style="background:rgba(188,140,255,.15);color:#bc8cff">${IC.cal}</span><div><div class="ik">Voli / aereo</div><div class="iv">${r.f}x/giorno</div></div></div>
+        <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.plane}</span><div><div class="ik">Aerei su tratta</div><div class="iv">${r.n} ${r.n===1?'aereo':'aerei'}</div></div></div>
       </div>
     </div>`;}).join('')
     +(pool.length>top.length?`<button id="bMore" style="width:100%;margin-top:10px;padding:12px;font-weight:600">Carica altre ${Math.min(page,pool.length-top.length)} tratte (${it(top.length)} di ${it(pool.length)})</button>`:`<div class="meta" style="text-align:center;margin-top:10px">Tutte le ${it(pool.length)} tratte mostrate.</div>`);
-  if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
 }
 async function loadData(){
   try{
@@ -570,15 +585,7 @@ let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
 ['ac','eng','mode','flo','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
-$('bOut').addEventListener('click',e=>{
-  if(e.target.id==='bMore'){renderBest(true);return;}
-  if(e.target.closest('#detail')) return;
-  const d=e.target.closest('[data-j]'); if(!d) return;
-  const j=+d.dataset.j;
-  if(j===dstIdx&&d.contains($('detail'))){parkDetail();dstIdx=null;markSel();return;}
-  dstIdx=j; markSel(); d.appendChild($('detail'));
-  fillRoute().then(()=>d.scrollIntoView({behavior:'smooth',block:'nearest'}));
-});
+$('bOut').addEventListener('click',e=>{if(e.target.id==='bMore')renderBest(true);});
 function parkDetail(){$('detailHome').prepend($('detail'));}
 function markSel(){document.querySelectorAll('#bOut .best').forEach(x=>x.style.borderColor=+x.dataset.j===dstIdx?'var(--j)':'');}
 $('setBtn').addEventListener('click',()=>{$('setPanel').style.display='block';document.body.style.overflow='hidden';});
