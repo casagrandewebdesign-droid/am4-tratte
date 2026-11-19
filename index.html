@@ -65,6 +65,14 @@
   .det{margin-top:10px;padding-top:6px;border-top:1px solid var(--line);cursor:default}
   .sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);overflow:auto;padding:12px}
   .sheetIn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;max-width:760px;margin:0 auto}
+  .best .hd{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .best .cty{font-size:.72rem;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  .best .nm{font-weight:700;font-size:1rem;margin-top:2px}
+  .best .code{font-weight:600;font-size:.8rem;color:var(--mut);margin-left:4px}
+  .best .dem{font-size:.82rem;margin-top:3px}
+  .best .rt{font-size:.78rem;color:var(--mut);text-align:right;white-space:nowrap;line-height:1.5}
+  .best .ft{display:flex;justify-content:space-between;align-items:flex-end}
+  .best .pl{font-size:.95rem}
 </style>
 </head>
 <body>
@@ -110,7 +118,7 @@
 <!-- dettaglio della tratta: viene spostato dentro la tratta toccata -->
 <div id="detailHome" style="display:none">
  <div id="detail" class="det">
-  <h3 style="margin-top:4px">Prezzi consigliati</h3>
+  <h3 style="margin:4px 0 8px;text-align:center;font-size:.68rem">Prezzi consigliati</h3>
   <div id="prices"></div>
  </div>
  <div id="apInfo"></div><div id="ops"></div><div id="sPlanes"></div><div id="sFlights"></div><div id="sFull"></div><div id="planes"></div><div id="warn"></div>
@@ -503,18 +511,28 @@ function renderBest(more){
   else if(ns!=='any') pool=[...res].sort((x,y)=>ns==='asc'?x.n-y.n:y.n-x.n); // stabile: dentro lo stesso numero resta l'ordine scelto
   const top=pool.slice(0,shown);
   if(!top.length){out.innerHTML=`<div class="warn">Nessuna tratta trovata con questi filtri.</div>`;return;}
-  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}.</div>`+top.map(r=>{
+  const fixedF=$('flo').value!=='auto';
+  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}${fixedF?` · ${$('flo').value} voli/g per tratta`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
     return `<div class="best" data-j="${r.j}"${r.j===dstIdx?' style="border-color:var(--j)"':''}>
-      <div class="t"><span><b>${esc(apCode(r.j))} · ${esc(APS[r.j][2])}</b> <span style="font-size:.8rem;white-space:nowrap"><span class="Y">${r.D.Y}</span>/<span class="J">${r.D.J}</span>/<span class="F">${r.D.F}</span></span></span><b style="color:${col};white-space:nowrap">${money(r.net)}/g</b></div>
-      <div class="meta">${esc(APS[r.j][3])} · ${it(Math.round(r.km))} km · ${hh}h${String(mm).padStart(2,'0')} · ${r.f} voli/g</div>
-      <div class="seats" style="margin:10px 0 6px">
+      <div class="hd">
+        <div>
+          <div class="cty">${esc(APS[r.j][3])}</div>
+          <div class="nm">${esc(APS[r.j][2])} <span class="code">${esc(apCode(r.j))}</span></div>
+          <div class="dem"><span class="Y">${r.D.Y}</span> / <span class="J">${r.D.J}</span> / <span class="F">${r.D.F}</span></div>
+        </div>
+        <div class="rt">${it(Math.round(r.km))} km<br>${hh}h${String(mm).padStart(2,'0')}${fixedF?'':`<br>${r.f} voli/g`}</div>
+      </div>
+      <div class="seats" style="margin:10px 0 8px">
         <div><div class="v Y">${r.s.Y}</div><div class="k">Economy</div></div>
         <div><div class="v J">${r.s.J}</div><div class="k">Business</div></div>
         <div><div class="v F">${r.s.F}</div><div class="k">Prima</div></div>
       </div>
-      <div class="meta" style="text-align:center">Aerei su tratta: <b style="color:var(--txt)">${r.n}</b>${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
+      <div class="ft">
+        <span class="pl">✈️ × <b>${r.n}</b></span>
+        <span style="text-align:right"><b style="color:${col};font-size:1.05rem">${money(r.net)}/g</b>${key==='fleet'?`<br><span class="meta">tratta ${money(r.fleet)}/g</span>`:''}${key==='trip'?`<br><span class="meta">${money(r.trip)}/volo</span>`:''}</span>
+      </div>
     </div>`;}).join('')
     +(pool.length>top.length?`<button id="bMore" style="width:100%;margin-top:10px;padding:12px;font-weight:600">Carica altre ${Math.min(page,pool.length-top.length)} tratte (${it(top.length)} di ${it(pool.length)})</button>`:`<div class="meta" style="text-align:center;margin-top:10px">Tutte le ${it(pool.length)} tratte mostrate.</div>`);
   if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
