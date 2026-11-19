@@ -101,7 +101,7 @@
     <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option></select></div>
     <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
     <div><label>Aerei su tratta</label><select id="bNs" class="keep"><option value="any">Qualsiasi</option><option value="asc">Crescente (1, 2, 3…)</option><option value="desc">Decrescente (…3, 2, 1)</option><option value="1">Solo 1</option><option value="2">Solo 2</option><option value="3">Solo 3</option><option value="4">Solo 4</option><option value="5">5 o più</option></select></div>
-    <div><label>Risultati</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
+    <div><label>Risultati per pagina</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
   </div>
   <div id="bOut" style="margin-top:6px"><div class="meta">Scegli l'hub: le tratte migliori per questo aereo compaiono qui.</div></div>
   <div class="ex">Solo voli diretti, piste controllate in Realism. Netto = ricavi − carburante − CO₂ − A-check, col marketing al minimo. Cost index e prezzi in ⚙️.</div>
@@ -492,14 +492,16 @@ async function findBest(){
   res.sort((x,y)=>(y[key]-x[key])||(y.net-x.net));
   lastRes=res; lastKey=key; renderBest();
 }
-function renderBest(){
+let shown=0;
+function renderBest(more){
   parkDetail();
+  const page=+$('bN').value||20; shown=more?shown+page:page;
   const res=lastRes, key=lastKey, out=$('bOut'), a=curAc();
   const ns=$('bNs').value;
   let pool=res;
   if(/^\d$/.test(ns)) pool=res.filter(r=>ns==='5'?r.n>=5:r.n===+ns);
   else if(ns!=='any') pool=[...res].sort((x,y)=>ns==='asc'?x.n-y.n:y.n-x.n); // stabile: dentro lo stesso numero resta l'ordine scelto
-  const top=pool.slice(0,+$('bN').value);
+  const top=pool.slice(0,shown);
   if(!top.length){out.innerHTML=`<div class="warn">Nessuna tratta trovata con questi filtri.</div>`;return;}
   out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
@@ -513,7 +515,8 @@ function renderBest(){
         <div><div class="v F">${r.s.F}</div><div class="k">Prima</div></div>
       </div>
       <div class="meta" style="text-align:center">Aerei su tratta: <b style="color:var(--txt)">${r.n}</b>${key==='fleet'?` · tratta ${money(r.fleet)}/g`:''}${key==='trip'?` · ${money(r.trip)}/volo`:''}</div>
-    </div>`;}).join('');
+    </div>`;}).join('')
+    +(pool.length>top.length?`<button id="bMore" style="width:100%;margin-top:10px;padding:12px;font-weight:600">Carica altre ${Math.min(page,pool.length-top.length)} tratte (${it(top.length)} di ${it(pool.length)})</button>`:`<div class="meta" style="text-align:center;margin-top:10px">Tutte le ${it(pool.length)} tratte mostrate.</div>`);
   if(dstIdx!=null){const c=out.querySelector(`[data-j="${dstIdx}"]`); if(c){c.appendChild($('detail'));fillRoute();} else dstIdx=null;}
 }
 async function loadData(){
@@ -550,6 +553,7 @@ const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeo
 ['ac','eng','mode','flo','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{
+  if(e.target.id==='bMore'){renderBest(true);return;}
   if(e.target.closest('#detail')) return;
   const d=e.target.closest('[data-j]'); if(!d) return;
   const j=+d.dataset.j;
