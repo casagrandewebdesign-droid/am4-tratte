@@ -108,20 +108,21 @@
 <div class="card" style="padding:12px 14px">
   <label>Aereo</label>
   <select id="ac">
+    <optgroup label="Boeing">
+      <option value="b738">Boeing 737-800</option>
+      <option value="b3910">Boeing 737 MAX 10</option>
+    </optgroup>
     <optgroup label="Airbus">
+      <option value="a338">Airbus A330-800neo</option>
       <option value="a388">Airbus A380-800</option>
       <option value="a339">Airbus A330-900neo</option>
-      <option value="a338">Airbus A330-800neo</option>
-    </optgroup>
-    <optgroup label="Boeing">
-      <option value="b3910">Boeing 737 MAX 10</option>
-      <option value="b738">Boeing 737-800</option>
     </optgroup>
   </select>
   <div class="row2">
     <div class="ap"><label>Hub</label><input id="hub" autocomplete="off" autocapitalize="characters" placeholder="es. FCO"><div class="sug" id="hubS"></div></div>
     <div><label>Modalità</label><select id="mode"><option value="R">Realism</option><option value="E">Easy</option></select></div>
   </div>
+  <div id="favHub" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
 </div>
 
 <div class="card">
@@ -620,12 +621,23 @@ async function loadData(){
     }
     let saved=null; try{saved=localStorage.getItem('am4ac');}catch(e){}
     if(saved&&AC[saved]&&saved!==cur){sel.value=saved;applyAircraft();calc();}
+    renderFavHub();
     let h=null; try{h=localStorage.getItem('am4hub');}catch(e){}
-    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();renderUsed();}
+    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();renderUsed();markFavHub();}
     if(owner()) api('list').then(refreshAll).catch(()=>{});
   }catch(e){$('apInfo').innerHTML='<span class="bad">Dati aeroporti non disponibili: puoi comunque inserire domanda e distanza a mano.</span>';}
 }
-setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();});
+const pickHub=i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();markFavHub();};
+setupAp('hub','hubS',pickHub);
+// hub preferiti (codici ICAO): un tocco e l'hub è scelto
+const FAV_HUBS=[['LIRF','Fiumicino'],['KLAX','Los Angeles'],['VIDP','New Delhi']];
+function renderFavHub(){
+  $('favHub').innerHTML='<span class="meta" style="align-self:center">⭐ Hub preferiti:</span>'+FAV_HUBS.filter(([c])=>I4[c]!=null).map(([c,nm])=>{const i=I4[c];
+    return `<button data-hub="${i}" style="padding:6px 12px;font-weight:600">${esc(apCode(i))} · ${esc(nm)}</button>`;}).join('');
+  markFavHub();
+}
+function markFavHub(){document.querySelectorAll('#favHub [data-hub]').forEach(b=>{const on=+b.dataset.hub===hubIdx;b.style.background=on?'var(--j)':'';b.style.color=on?'#fff':'';});}
+$('favHub').addEventListener('click',e=>{const b=e.target.closest('[data-hub]'); if(!b) return; const i=+b.dataset.hub; $('hub').value=apLabel(i); pickHub(i);});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
 ['ac','eng','mode','flo','gap','dur','durTol','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
