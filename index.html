@@ -58,6 +58,7 @@
   .sug div{padding:9px 10px;font-size:.85rem;border-bottom:1px solid var(--line);cursor:pointer}
   .sug div:last-child{border-bottom:none}
   .sug b{color:var(--j)}
+  .sug .sh{cursor:default;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut,#8b949e);background:var(--bg);padding:6px 10px}
   .best{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer}
   .best:active{background:var(--line)}
   .best .t{display:flex;justify-content:space-between;gap:8px;font-size:.9rem}
@@ -120,7 +121,6 @@
     <div class="ap"><label>Hub</label><input id="hub" autocomplete="off" autocapitalize="characters" placeholder="es. FCO"><div class="sug" id="hubS"></div></div>
     <div><label>Modalità</label><select id="mode"><option value="R">Realism</option><option value="E">Easy</option></select></div>
   </div>
-  <div id="favHub" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
 </div>
 
 <div class="card">
@@ -483,13 +483,19 @@ function searchAp(q){
   return [...ex,...st,...co].slice(0,15);
 }
 function setupAp(inp,box,onPick){
+  const row=i=>`<div data-i="${i}"><b>${esc(apCode(i))}</b> ${esc(APS[i][2])} <span class="meta">(${esc(APS[i][3])} · pista ${it(APS[i][6])} ft)</span></div>`;
+  const head=t=>`<div class="sh">${t}</div>`;
+  // in cima "I miei" (preferiti), poi gli altri risultati
   const show=()=>{
-    const r=searchAp($(inp).value);
-    $(box).innerHTML=r.map(i=>`<div data-i="${i}"><b>${esc(apCode(i))}</b> ${esc(APS[i][2])} <span class="meta">(${esc(APS[i][3])} · pista ${it(APS[i][6])} ft)</span></div>`).join('');
-    $(box).style.display=r.length?'block':'none';
+    if(!APS) return;
+    const q=$(inp).value.trim(), fav=inp==='hub'?favHubs():[];
+    const r=q&&!q.includes('·')?searchAp(q):[];
+    const fq=q&&!q.includes('·')?fav.filter(i=>r.includes(i)):fav, rest=r.filter(i=>!fq.includes(i));
+    $(box).innerHTML=(fq.length?head('⭐ I miei hub')+fq.map(row).join(''):'')+(rest.length?(fq.length?head('Altri aeroporti'):'')+rest.map(row).join(''):'');
+    $(box).style.display=fq.length||rest.length?'block':'none';
   };
   $(inp).addEventListener('input',show);
-  $(inp).addEventListener('focus',()=>{$(inp).select();});
+  $(inp).addEventListener('focus',()=>{$(inp).select();show();});
   $(inp).addEventListener('blur',()=>setTimeout(()=>$(box).style.display='none',150));
   $(box).addEventListener('pointerdown',e=>{
     const d=e.target.closest('[data-i]'); if(!d) return;
@@ -615,23 +621,16 @@ async function loadData(){
     let saved=null; try{saved=localStorage.getItem('am4ac');}catch(e){}
     if(saved==='a388'||saved==='a339') saved='db_'+saved; // tolti dai preferiti: restano nell'elenco completo
     if(saved&&AC[saved]&&saved!==cur){sel.value=saved;applyAircraft();calc();}
-    renderFavHub();
     let h=null; try{h=localStorage.getItem('am4hub');}catch(e){}
-    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();renderUsed();markFavHub();}
+    if(h!=null&&APS[+h]){hubIdx=+h;$('hub').value=apLabel(hubIdx);findBest();renderUsed();}
     if(owner()) api('list').then(refreshAll).catch(()=>{});
   }catch(e){$('apInfo').innerHTML='<span class="bad">Dati aeroporti non disponibili: puoi comunque inserire domanda e distanza a mano.</span>';}
 }
-const pickHub=i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();markFavHub();};
+const pickHub=i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();};
 setupAp('hub','hubS',pickHub);
-// hub preferiti (codici ICAO): un tocco e l'hub è scelto
-const FAV_HUBS=[['LIRF','Fiumicino'],['KLAX','Los Angeles'],['VIDP','New Delhi']];
-function renderFavHub(){
-  $('favHub').innerHTML='<span class="meta" style="align-self:center">⭐ Hub preferiti:</span>'+FAV_HUBS.filter(([c])=>I4[c]!=null).map(([c,nm])=>{const i=I4[c];
-    return `<button data-hub="${i}" style="padding:6px 12px;font-weight:600">${esc(apCode(i))} · ${esc(nm)}</button>`;}).join('');
-  markFavHub();
-}
-function markFavHub(){document.querySelectorAll('#favHub [data-hub]').forEach(b=>{const on=+b.dataset.hub===hubIdx;b.style.background=on?'var(--j)':'';b.style.color=on?'#fff':'';});}
-$('favHub').addEventListener('click',e=>{const b=e.target.closest('[data-hub]'); if(!b) return; const i=+b.dataset.hub; $('hub').value=apLabel(i); pickHub(i);});
+// hub preferiti (codici ICAO): compaiono in cima ai suggerimenti dell'hub
+const FAV_HUBS=['LIRF','KLAX','VIDP'];
+const favHubs=()=>FAV_HUBS.map(c=>I4[c]).filter(i=>i!=null);
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
 ['ac','eng','mode','flo','gap','dur','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
@@ -772,6 +771,6 @@ if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').t
   });
 })();
 </script>
-<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">27</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
+<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">28</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
 </body>
 </html>
