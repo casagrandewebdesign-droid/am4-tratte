@@ -62,11 +62,6 @@
   .durRow input{flex:1;min-width:0;font-size:1.1rem;font-weight:600}
   .durRow button{white-space:nowrap}
   .durRow button.on{background:var(--j);color:#fff;border-color:var(--j)}
-  .pills{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-  .pills button{padding:8px 4px;border-radius:10px;line-height:1.2;font-size:.78rem}
-  .pills button b{display:block;font-size:.95rem}
-  .pills button.on{background:var(--j);color:#fff;border-color:var(--j)}
-  .pills .pm{grid-column:1/-1;font-size:.72rem;color:var(--mut);margin-top:2px}
   .sug .sh{cursor:default;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut,#8b949e);background:var(--bg);padding:6px 10px}
   .best{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer}
   .best:active{background:var(--line)}
@@ -136,7 +131,6 @@
   <h2>🔎 Tratte migliori dall'hub</h2>
   <label>⏱ Durata del volo</label>
   <div class="durRow"><input id="dur" class="keep" type="time" step="300"><button id="durX" type="button">Tutte le durate</button></div>
-  <div class="pills" id="durHint"></div>
   <div class="row2">
     <div class="dEasy"><label>Distanza min (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
     <div class="dEasy"><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
@@ -286,14 +280,7 @@ function durWin(){
   const [H,M]=v.split(':').map(Number), hi=H+M/60; if(!hi) return null;
   return {hi,lo:Math.max(0,hi-0.5)}; // fascia fissa: fino a 30 min più corti
 }
-function durHint(){
-  // scorciatoie: durata massima per N giri al giorno (con 30 min di margine tra un volo e l'altro)
-  const g=num('gap')/60, cur=$('dur').value;
-  const t=x=>{const h=Math.floor(x+EPS),m=Math.round((x-h)*60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');};
-  $('durHint').innerHTML=[1,2,3,4].map(n=>{const v=t(24/n-g);return `<button type="button" data-d="${v}" class="${cur===v?'on':''}"><b>${hm(24/n-g)}</b>${n} ${n===1?'giro':'giri'}</button>`;}).join('')
-    +`<div class="pm">Giri al giorno: tocca per far coincidere i voli, tutti gli aerei ripartono insieme (30 min di margine inclusi).</div>`;
-  $('durX').classList.toggle('on',!cur);
-}
+function durHint(){$('durX').classList.toggle('on',!$('dur').value);}
 function flights(){
   const o=$('flo').value, t=timing();
   if(o!=='auto') return {f:+o,auto:false,t};
@@ -762,7 +749,6 @@ $('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('
 document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();e.blur();}}));
 calc();
 const setDur=v=>{$('dur').value=v;$('dur').dispatchEvent(new Event('change'));};
-$('durHint').addEventListener('click',e=>{const b=e.target.closest('[data-d]'); if(b) setDur($('dur').value===b.dataset.d?'':b.dataset.d);});
 $('durX').addEventListener('click',()=>setDur(''));
 $('dur').addEventListener('change',durHint); durHint();
 loadData();
@@ -790,6 +776,6 @@ if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').t
   });
 })();
 </script>
-<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">29</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
+<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">30</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
 </body>
 </html>
