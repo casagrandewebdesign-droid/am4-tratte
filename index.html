@@ -114,8 +114,6 @@
     </optgroup>
     <optgroup label="Airbus">
       <option value="a338">Airbus A330-800neo</option>
-      <option value="a388">Airbus A380-800</option>
-      <option value="a339">Airbus A330-900neo</option>
     </optgroup>
   </select>
   <div class="row2">
@@ -218,10 +216,6 @@ const money=v=>'$'+Math.round(v).toLocaleString('it-IT');
 
 // aerei: capacità in posti economy (business = 2 posti, prima = 3 posti)
 const AC={
-  a388:{n:'A380-800',full:'Airbus A380-800',cap:600,rng:14500,rwy:9680,cc:0.16,price:215629503,chkC:12937770,chkH:450,
-    eng:{gp:{n:'GP7270',spd:964,fc:22.89,def:true},t970:{n:'RR Trent 970',spd:917,fc:18.9},t972:{n:'RR Trent 972',spd:1049,fc:22.26}}},
-  a339:{n:'A330-900neo',full:'Airbus A330-900neo',cap:440,rng:12130,rwy:9950,cc:0.16,price:218630936,chkC:4372618,chkH:510,
-    eng:{def:{n:'Motore standard',spd:801,fc:13.00,def:true}}},
   a338:{n:'A330-800neo',full:'Airbus A330-800neo',cap:406,rng:13900,rwy:9500,cc:0.15,price:85325684,chkC:3413028,chkH:510,
     eng:{def:{n:'Motore standard',spd:801,fc:12.00,def:true}}},
   b3910:{n:'737 MAX 10',full:'Boeing 737 MAX 10',cap:225,rng:7000,rwy:7600,cc:0.10,price:19649600,chkC:800000,chkH:450,
@@ -229,7 +223,7 @@ const AC={
   b738:{n:'737-800',full:'Boeing 737-800',cap:184,rng:7000,rwy:7550,cc:0.12,price:4407858,chkC:462826,chkH:470,
     eng:{def:{n:'Motore standard',spd:725,fc:9.40,def:true}}}
 };
-const curAc=()=>AC[$('ac').value]||AC.a388;
+const curAc=()=>AC[$('ac').value]||AC.b738;
 const ENGOF=()=>curAc().eng;
 const it=n=>n.toLocaleString('it-IT');
 function fillEngines(sel){
@@ -602,7 +596,7 @@ async function loadData(){
     const [ap,ac]=await Promise.all([fetch('data/airports.json').then(r=>r.json()),fetch('data/aircraft.json').then(r=>r.json())]);
     APS=ap; APS.forEach((x,i)=>I4[x[1]]=i);
     // tutti gli aerei passeggeri del database, raggruppati per costruttore
-    const mine={a388:1,a339:1,a338:1,b738:1,b73max10:1}, byKey={};
+    const mine={a338:1,b738:1,b73max10:1}, byKey={};
     for(const [sn,man,name,en,spd,fc,co2,cost,cap,rwy,chk,rng,mnt] of ac){
       if(mine[sn]) continue;
       const k='db_'+sn;
@@ -620,6 +614,7 @@ async function loadData(){
       sel.appendChild(g);
     }
     let saved=null; try{saved=localStorage.getItem('am4ac');}catch(e){}
+    if(saved==='a388'||saved==='a339') saved='db_'+saved; // tolti dai preferiti: restano nell'elenco completo
     if(saved&&AC[saved]&&saved!==cur){sel.value=saved;applyAircraft();calc();}
     renderFavHub();
     let h=null; try{h=localStorage.getItem('am4hub');}catch(e){}
@@ -745,8 +740,6 @@ distVis();
 
 try{
   const a=localStorage.getItem('am4ac'); if(a&&AC[a]) $('ac').value=a;
-  // migra la vecchia scelta motore dell'A380
-  const old=localStorage.getItem('am4eng'); if(old&&!localStorage.getItem('am4eng_a388')) localStorage.setItem('am4eng_a388',old);
 }catch(e){}
 applyAircraft();
 $('ac').addEventListener('change',()=>{try{localStorage.setItem('am4ac',$('ac').value)}catch(e){}applyAircraft();calc();if(hubIdx!=null&&dstIdx!=null)fillRoute();});
