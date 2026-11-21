@@ -273,12 +273,12 @@ function timingFor(km){
   const g=num('gap')/60, h=km/v, max=Math.max(0,Math.floor(24/(h+g)+EPS));
   return {v,h,g,max};
 }
-// durata voluta: tiene solo le tratte tra (durata − 30 min) e durata
+// durata voluta: tiene solo le tratte tra (durata − 30 min) e (durata + 30 min)
 const hm=x=>{const h=Math.floor(x+EPS),m=Math.round((x-h)*60);return h+'h'+(m?' '+String(m).padStart(2,'0')+'m':'');};
 function durWin(){
   const v=$('dur').value; if(!/^\d{1,2}:\d{2}/.test(v)) return null;
   const [H,M]=v.split(':').map(Number), hi=H+M/60; if(!hi) return null;
-  return {hi,lo:Math.max(0,hi-0.5)}; // fascia fissa: fino a 30 min più corti
+  return {hi:hi+0.5,lo:Math.max(0,hi-0.5)}; // fascia fissa: 30 min in meno o in più
 }
 function durHint(){$('durX').classList.toggle('on',!$('dur').value);}
 function flights(){
@@ -776,6 +776,6 @@ if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').t
   });
 })();
 </script>
-<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">30</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
+<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">31</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
 </body>
 </html>
