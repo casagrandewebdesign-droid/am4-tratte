@@ -132,6 +132,9 @@
     <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option></select></div>
     <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h (col margine)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
     <div><label>Margine tra un volo e l'altro</label><select id="gap" class="keep"><option value="0">Nessuno</option><option value="15">15 minuti</option><option value="30" selected>30 minuti</option><option value="45">45 minuti</option><option value="60">60 minuti</option></select></div>
+    <div><label>Durata volo voluta (h:mm)</label><input id="dur" class="keep" type="time" step="300" placeholder="qualsiasi"></div>
+    <div><label>Accetta voli più corti di</label><select id="durTol" class="keep"><option value="15">15 minuti</option><option value="30" selected>30 minuti</option><option value="60">1 ora</option><option value="120">2 ore</option></select></div>
+    <div style="grid-column:1/-1" class="meta" id="durHint"></div>
     <div><label>Aerei su tratta</label><select id="bNs" class="keep"><option value="any">Qualsiasi</option><option value="asc">Crescente (1, 2, 3…)</option><option value="desc">Decrescente (…3, 2, 1)</option><option value="1">Solo 1</option><option value="2">Solo 2</option><option value="3">Solo 3</option><option value="4">Solo 4</option><option value="5">5 o più</option></select></div>
     <div><label>Risultati per pagina</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
   </div>
@@ -271,6 +274,18 @@ function timingFor(km){
   // margine tra un volo e l'altro: ritardo concesso a ogni ripartenza
   const g=num('gap')/60, h=km/v, max=Math.max(0,Math.floor(24/(h+g)+EPS));
   return {v,h,g,max};
+}
+// durata voluta: tiene solo le tratte tra (durata − tolleranza) e durata
+const hm=x=>{const h=Math.floor(x+EPS),m=Math.round((x-h)*60);return h+'h'+(m?' '+String(m).padStart(2,'0')+'m':'');};
+function durWin(){
+  const v=$('dur').value; if(!/^\d{1,2}:\d{2}/.test(v)) return null;
+  const [H,M]=v.split(':').map(Number), hi=H+M/60; if(!hi) return null;
+  return {hi,lo:Math.max(0,hi-num('durTol')/60)};
+}
+function durHint(){
+  const g=num('gap')/60;
+  $('durHint').innerHTML='Durata massima per far coincidere i giri'+(g?` (con ${Math.round(g*60)} min di margine)`:'')+': '
+    +[1,2,3,4].map(n=>`<b>${n}</b>/giorno → ${hm(24/n-g)}`).join(' · ')+'. Lascia vuota la durata per vedere tutte le tratte.';
 }
 function flights(){
   const o=$('flo').value, t=timing();
@@ -518,11 +533,12 @@ async function findBest(){
   const R=$('mode').value==='R';
   const minKm=R?100:Math.max(100,num('bMin')), maxKm=R?(num('rng')||Infinity):Math.min(num('bMax')||Infinity,num('rng')||Infinity);
   if(rwyWarn(hubIdx)){out.innerHTML=`<div class="bad">La pista dell'hub (${it(APS[hubIdx][6])} ft) è troppo corta per ${esc(a.n)}.</div>`;return;}
-  const res=[]; buildUsedMap();
+  const dw=durWin(); const res=[]; buildUsedMap();
   for(let j=0;j<NAP;j++){
     if(j===hubIdx||rwyWarn(j)) continue;
     const km=dist(hubIdx,j); if(km<minKm||km>maxKm) continue;
     const t=timingFor(km); if(!t||t.max<1) continue;
+    if(dw&&(t.h>dw.hi+EPS||t.h<dw.lo-EPS)) continue;
     const f=fo==='auto'?t.max:+fo; if(f>t.max) continue;
     const u=usedMap[APS[j][1]];
     const D=u?{Y:Math.max(0,row.Y[j]-u.Y),J:Math.max(0,row.J[j]-u.J),F:Math.max(0,row.F[j]-u.F)}:{Y:row.Y[j],J:row.J[j],F:row.F[j]};
@@ -558,7 +574,7 @@ function renderBest(more){
   const top=pool.slice(0,shown);
   if(!top.length){out.innerHTML=`<div class="warn">Nessuna tratta trovata con questi filtri.</div>`;return;}
   const fixedF=$('flo').value!=='auto';
-  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}${fixedF?` · ${$('flo').value} voli/g per tratta`:''}.</div>`+top.map(r=>{
+  out.innerHTML=`<div class="meta" style="margin-top:10px">${it(pool.length)} destinazioni valide${/^\d$/.test(ns)?(ns==='5'?' con 5 o più aerei':` con ${ns} ${ns==='1'?'aereo':'aerei'}`):''} da ${esc(apCode(hubIdx))} con ${esc(a.n)}${$('mode').value==='R'?` (100–${it(num('rng'))} km, autonomia dell'aereo)`:''}${fixedF?` · ${$('flo').value} voli/g per tratta`:''}${durWin()?` · durata ${hm(durWin().lo)}–${hm(durWin().hi)}`:''}.</div>`+top.map(r=>{
     const hh=Math.floor(r.h), mm=Math.round((r.h-hh)*60);
     const col=r.net>=0?'var(--y)':'var(--bad)';
     const cls=(c,n)=>`<div class="cb cb${c}"><div class="cl">${n}</div><div class="cs">${r.s[c]}</div><div class="cp">${money(r.p[c])}</div><div class="cd">${it(r.D[c])} domanda</div></div>`;
@@ -612,7 +628,7 @@ async function loadData(){
 setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
-['ac','eng','mode','flo','gap','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
+['ac','eng','mode','flo','gap','dur','durTol','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{if(e.target.id==='bMore')renderBest(true);});
 function parkDetail(){$('detailHome').prepend($('detail'));}
@@ -726,6 +742,7 @@ $('eng').addEventListener('change',()=>{applyEngine();try{localStorage.setItem('
 ['spd','fc'].forEach(id=>$(id).addEventListener('input',updateAcLabel));
 document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();e.blur();}}));
 calc();
+$('gap').addEventListener('change',durHint); durHint();
 loadData();
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
 </script>
