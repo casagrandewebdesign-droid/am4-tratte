@@ -192,7 +192,7 @@
       <div><label>Con marketing: max %</label><input id="mkHi" type="number" inputmode="numeric" value="99"></div>
       <div><label>Senza marketing %</label><input id="nmLo" type="number" inputmode="numeric" value="45"></div>
       <div><label>Rientro massimo accettabile (giorni)</label><input id="maxPay" type="number" inputmode="numeric" value="365"></div>
-      <div><label>Cost index (0–200)</label><input id="ci" type="number" min="0" max="200" inputmode="numeric" value="200"></div>
+      <div><label>Cost index (0–200, massimo con la durata voluta)</label><input id="ci" type="number" min="0" max="200" inputmode="numeric" value="200"></div>
       <div><label>Prezzo carburante ($ / 1.000 lbs)</label><input id="fuelP" class="keep" type="number" inputmode="numeric" value="500"></div>
       <div><label>Prezzo CO₂ ($ / 1.000 quote)</label><input id="co2P" class="keep" type="number" inputmode="numeric" value="120"></div>
       <div><label>Training carburante (0–3)</label><input id="tF" class="keep" type="number" min="0" max="3" inputmode="numeric" value="3"></div>
@@ -265,20 +265,28 @@ function pricesFor(km){
 }
 // tempo di volo e voli possibili nelle 24 ore
 function timing(){return timingFor(num('km'));}
+// cost index: con una durata voluta si rallenta l'aereo (CI più basso) per arrivare a quell'ora
+const vMax=()=>num('spd')*($('mode').value==='E'?1.5:1);
+function ciFor(km){
+  const base=Math.min(200,num('ci')), dw=durWin();
+  if(!dw||!km||!vMax()) return base;
+  const need=((km/dw.t)/vMax()-0.3)/0.0035;
+  return Math.max(0,Math.min(base,Math.ceil(need-EPS)));
+}
 function timingFor(km){
-  const ci=Math.min(200,num('ci'));
-  const v=num('spd')*(0.0035*ci+0.3)*($('mode').value==='E'?1.5:1);
+  const ci=ciFor(km);
+  const v=vMax()*(0.0035*ci+0.3);
   if(!km||!v) return null;
   // margine tra un volo e l'altro: ritardo concesso a ogni ripartenza
   const g=num('gap')/60, h=km/v, max=Math.max(0,Math.floor(24/(h+g)+EPS));
-  return {v,h,g,max};
+  return {v,h,g,max,ci};
 }
 // durata voluta: tiene solo le tratte tra (durata − 30 min) e (durata + 30 min)
 const hm=x=>{const h=Math.floor(x+EPS),m=Math.round((x-h)*60);return h+'h'+(m?' '+String(m).padStart(2,'0')+'m':'');};
 function durWin(){
   const v=$('dur').value; if(!/^\d{1,2}:\d{2}/.test(v)) return null;
   const [H,M]=v.split(':').map(Number), hi=H+M/60; if(!hi) return null;
-  return {hi:hi+0.5,lo:Math.max(0,hi-0.5)}; // fascia fissa: 30 min in meno o in più
+  return {t:hi,hi:hi+0.5,lo:Math.max(0,hi-0.5)}; // fascia fissa: 30 min in meno o in più
 }
 function durHint(){$('durX').classList.toggle('on',!$('dur').value);}
 function flights(){
@@ -307,7 +315,7 @@ function maintFor(h,f){
 }
 // carburante e CO₂ al giorno (formule abc8747/am4), in $
 function fuelCo2Day(s,km,f,L,avail){
-  const ci=Math.min(200,num('ci')), d=Math.ceil(km*100)/100;
+  const ci=ciFor(km), d=Math.ceil(km*100)/100;
   const tf=Math.min(3,num('tF')), tc=Math.min(5,num('tC'));
   const fuel=(1-tf/100)*d*num('fc')*(ci/500+0.6);
   const co2=(1-tc/100)*(d*(curAc().cc||0)*(s.Y+2*s.J+3*s.F)*L+(s.Y+s.J+s.F))*(ci/2000+0.9);
@@ -371,7 +379,7 @@ function renderOps(){
   const {f,auto,t}=flights(), km=num('km');
   if(!t){$('ops').innerHTML='<span class="meta">Inserisci la distanza per calcolare durata e voli al giorno.</span>';return;}
   const hh=Math.floor(t.h), mm=Math.round((t.h-hh)*60);
-  const out=[`<span class="chip">⏱ ${hh}h ${String(mm).padStart(2,'0')}m a volo</span><span class="chip">🔁 <b>${f}</b> ${f===1?"volo":"voli"}/giorno ${auto?'(auto)':'(manuale)'}</span><span class="chip">🕒 ${(t.h*f).toFixed(1)}h su 24 in volo</span>`];
+  const out=[`<span class="chip">⏱ ${hh}h ${String(mm).padStart(2,'0')}m a volo</span><span class="chip">🎚 CI <b>${t.ci}</b>${durWin()?' (per la durata voluta)':''}</span><span class="chip">🔁 <b>${f}</b> ${f===1?"volo":"voli"}/giorno ${auto?'(auto)':'(manuale)'}</span><span class="chip">🕒 ${(t.h*f).toFixed(1)}h su 24 in volo</span>`];
   if(f>=1&&f<=t.max){const iv=24/f, ih=Math.floor(iv+EPS), im=Math.round((iv-ih)*60), sl=Math.round((iv-t.h)*60);
     out.push(`<div class="meta" style="margin-top:6px">🛫 Parti ogni <b>${ih}h${im?' '+String(im).padStart(2,'0')+'m':''}</b> · ${sl} min di margine per ripartire${t.g?` (minimo impostato ${Math.round(t.g*60)})`:''}</div>`);}
   if(km>num('rng')) out.push(`<div class="bad" style="margin-top:6px">⚠ ${km.toLocaleString('it-IT')} km supera l'autonomia (${num('rng').toLocaleString('it-IT')} km): serve uno scalo.</div>`);
@@ -551,7 +559,7 @@ async function findBest(){
     const planes=units/(cap*f);
     if(u&&Math.floor(planes)<1) continue; // già usata: torna solo se c'è domanda per un altro aereo pieno
     const n=Math.max(1,Math.floor(planes));
-    res.push({j,km,f,h:t.h,D,s,p,net,u,trip:net/(f*m.avail),planes,n,fleet:net*n});
+    res.push({j,km,f,h:t.h,ci:t.ci,D,s,p,net,u,trip:net/(f*m.avail),planes,n,fleet:net*n});
   }
   const sv=$('bSort').value, key=sv==='trip'?'trip':sv==='fleet'?'fleet':'net';
   res.sort((x,y)=>(y[key]-x[key])||(y.net-x.net));
@@ -573,7 +581,7 @@ function renderBest(more){
   else if(ns!=='any') pool=[...res].sort((x,y)=>ns==='asc'?x.n-y.n:y.n-x.n); // stabile: dentro lo stesso numero resta l'ordine scelto
   const top=pool.slice(0,shown);
   if(!top.length){
-    const dw=durWin(), t=timingFor(1), mx=t&&num('rng')?num('rng')/t.v:0;
+    const dw=durWin(), cv=vMax()*(0.0035*Math.min(200,num('ci'))+0.3), mx=cv&&num('rng')?num('rng')/cv:0;
     const why=dw&&mx&&mx<dw.lo?` Con ${esc(a.n)} il volo più lungo possibile dura circa ${hm(mx)} (autonomia ${it(num('rng'))} km): scegli una durata più corta.`:'';
     out.innerHTML=`<div class="warn">Nessuna tratta trovata con questi filtri.${why}</div>`;return;}
   const fixedF=$('flo').value!=='auto';
@@ -591,7 +599,7 @@ function renderBest(more){
       </div>
       <div class="cbs">${cls('Y','Economy')}${cls('J','Business')}${cls('F','Prima')}</div>
       <div class="ib">
-        <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.clock}</span><div><div class="ik">Durata</div><div class="iv">~${hh}h ${String(mm).padStart(2,'0')}m</div></div></div>
+        <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.clock}</span><div><div class="ik">Durata</div><div class="iv">~${hh}h ${String(mm).padStart(2,'0')}m</div><div class="ik">CI ${r.ci}</div></div></div>
         <div class="ii"><span class="ic" style="background:rgba(188,140,255,.15);color:#bc8cff">${IC.cal}</span><div><div class="ik">Voli / aereo</div><div class="iv">${r.f}x/giorno</div><div class="ik">ogni ${(()=>{const iv=24/r.f,ih=Math.floor(iv+EPS),im=Math.round((iv-ih)*60);return ih+'h'+(im?' '+String(im).padStart(2,'0')+'m':'');})()}</div></div></div>
         <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.plane}</span><div><div class="ik">Aerei su tratta</div><div class="iv">${r.n} ${r.n===1?'aereo':'aerei'}</div></div></div>
       </div>
@@ -776,6 +784,6 @@ if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').t
   });
 })();
 </script>
-<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">31</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
+<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">32</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
 </body>
 </html>
