@@ -132,7 +132,6 @@
     <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h (col margine)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
     <div><label>Margine tra un volo e l'altro</label><select id="gap" class="keep"><option value="0">Nessuno</option><option value="15">15 minuti</option><option value="30" selected>30 minuti</option><option value="45">45 minuti</option><option value="60">60 minuti</option></select></div>
     <div><label>Durata volo voluta (h:mm)</label><input id="dur" class="keep" type="time" step="300" placeholder="qualsiasi"></div>
-    <div><label>Accetta voli più corti di</label><select id="durTol" class="keep"><option value="15">15 minuti</option><option value="30" selected>30 minuti</option><option value="60">1 ora</option><option value="120">2 ore</option></select></div>
     <div style="grid-column:1/-1" class="meta" id="durHint"></div>
     <div><label>Aerei su tratta</label><select id="bNs" class="keep"><option value="any">Qualsiasi</option><option value="asc">Crescente (1, 2, 3…)</option><option value="desc">Decrescente (…3, 2, 1)</option><option value="1">Solo 1</option><option value="2">Solo 2</option><option value="3">Solo 3</option><option value="4">Solo 4</option><option value="5">5 o più</option></select></div>
     <div><label>Risultati per pagina</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
@@ -270,12 +269,12 @@ function timingFor(km){
   const g=num('gap')/60, h=km/v, max=Math.max(0,Math.floor(24/(h+g)+EPS));
   return {v,h,g,max};
 }
-// durata voluta: tiene solo le tratte tra (durata − tolleranza) e durata
+// durata voluta: tiene solo le tratte tra (durata − 30 min) e durata
 const hm=x=>{const h=Math.floor(x+EPS),m=Math.round((x-h)*60);return h+'h'+(m?' '+String(m).padStart(2,'0')+'m':'');};
 function durWin(){
   const v=$('dur').value; if(!/^\d{1,2}:\d{2}/.test(v)) return null;
   const [H,M]=v.split(':').map(Number), hi=H+M/60; if(!hi) return null;
-  return {hi,lo:Math.max(0,hi-num('durTol')/60)};
+  return {hi,lo:Math.max(0,hi-0.5)}; // fascia fissa: fino a 30 min più corti
 }
 function durHint(){
   const g=num('gap')/60;
@@ -635,7 +634,7 @@ function markFavHub(){document.querySelectorAll('#favHub [data-hub]').forEach(b=
 $('favHub').addEventListener('click',e=>{const b=e.target.closest('[data-hub]'); if(!b) return; const i=+b.dataset.hub; $('hub').value=apLabel(i); pickHub(i);});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
-['ac','eng','mode','flo','gap','dur','durTol','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
+['ac','eng','mode','flo','gap','dur','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{if(e.target.id==='bMore')renderBest(true);});
 function parkDetail(){$('detailHome').prepend($('detail'));}
