@@ -130,7 +130,8 @@
     <div class="dEasy"><label>Distanza min (km)</label><input id="bMin" class="keep" type="number" inputmode="numeric" value="1000"></div>
     <div class="dEasy"><label>Distanza max (km)</label><input id="bMax" class="keep" type="number" inputmode="numeric" placeholder="autonomia"></div>
     <div><label>Ordina per</label><select id="bSort" class="keep"><option value="day">Profitto/giorno per aereo</option><option value="fleet">Profitto totale tratta</option><option value="trip">Profitto per volo</option></select></div>
-    <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+    <div><label>Voli al giorno</label><select id="flo" class="keep"><option value="auto">Massimo in 24h (col margine)</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+    <div><label>Margine tra un volo e l'altro</label><select id="gap" class="keep"><option value="0">Nessuno</option><option value="15">15 minuti</option><option value="30" selected>30 minuti</option><option value="45">45 minuti</option><option value="60">60 minuti</option></select></div>
     <div><label>Aerei su tratta</label><select id="bNs" class="keep"><option value="any">Qualsiasi</option><option value="asc">Crescente (1, 2, 3…)</option><option value="desc">Decrescente (…3, 2, 1)</option><option value="1">Solo 1</option><option value="2">Solo 2</option><option value="3">Solo 3</option><option value="4">Solo 4</option><option value="5">5 o più</option></select></div>
     <div><label>Risultati per pagina</label><select id="bN" class="keep"><option>20</option><option selected>40</option><option>100</option></select></div>
   </div>
@@ -267,8 +268,9 @@ function timingFor(km){
   const ci=Math.min(200,num('ci'));
   const v=num('spd')*(0.0035*ci+0.3)*($('mode').value==='E'?1.5:1);
   if(!km||!v) return null;
-  const h=km/v, max=Math.max(0,Math.floor(24/h+EPS));
-  return {v,h,max};
+  // margine tra un volo e l'altro: ritardo concesso a ogni ripartenza
+  const g=num('gap')/60, h=km/v, max=Math.max(0,Math.floor(24/(h+g)+EPS));
+  return {v,h,g,max};
 }
 function flights(){
   const o=$('flo').value, t=timing();
@@ -361,9 +363,11 @@ function renderOps(){
   if(!t){$('ops').innerHTML='<span class="meta">Inserisci la distanza per calcolare durata e voli al giorno.</span>';return;}
   const hh=Math.floor(t.h), mm=Math.round((t.h-hh)*60);
   const out=[`<span class="chip">⏱ ${hh}h ${String(mm).padStart(2,'0')}m a volo</span><span class="chip">🔁 <b>${f}</b> ${f===1?"volo":"voli"}/giorno ${auto?'(auto)':'(manuale)'}</span><span class="chip">🕒 ${(t.h*f).toFixed(1)}h su 24 in volo</span>`];
+  if(f>=1&&f<=t.max){const iv=24/f, ih=Math.floor(iv+EPS), im=Math.round((iv-ih)*60), sl=Math.round((iv-t.h)*60);
+    out.push(`<div class="meta" style="margin-top:6px">🛫 Parti ogni <b>${ih}h${im?' '+String(im).padStart(2,'0')+'m':''}</b> · ${sl} min di margine per ripartire${t.g?` (minimo impostato ${Math.round(t.g*60)})`:''}</div>`);}
   if(km>num('rng')) out.push(`<div class="bad" style="margin-top:6px">⚠ ${km.toLocaleString('it-IT')} km supera l'autonomia (${num('rng').toLocaleString('it-IT')} km): serve uno scalo.</div>`);
   if(t.max<1) out.push(`<div class="bad" style="margin-top:6px">⚠ Il volo dura più di 24 ore.</div>`);
-  else if(f>t.max) out.push(`<div class="bad" style="margin-top:6px">⚠ ${f} voli non stanno in 24 ore: al massimo ${t.max}.</div>`);
+  else if(f>t.max) out.push(`<div class="bad" style="margin-top:6px">⚠ ${f} voli non stanno in 24 ore${t.g?` con ${Math.round(t.g*60)} min di margine`:''}: al massimo ${t.max}.</div>`);
   $('ops').innerHTML=out.join('');
 }
 
@@ -569,7 +573,7 @@ function renderBest(more){
       <div class="cbs">${cls('Y','Economy')}${cls('J','Business')}${cls('F','Prima')}</div>
       <div class="ib">
         <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.clock}</span><div><div class="ik">Durata</div><div class="iv">~${hh}h ${String(mm).padStart(2,'0')}m</div></div></div>
-        <div class="ii"><span class="ic" style="background:rgba(188,140,255,.15);color:#bc8cff">${IC.cal}</span><div><div class="ik">Voli / aereo</div><div class="iv">${r.f}x/giorno</div></div></div>
+        <div class="ii"><span class="ic" style="background:rgba(188,140,255,.15);color:#bc8cff">${IC.cal}</span><div><div class="ik">Voli / aereo</div><div class="iv">${r.f}x/giorno</div><div class="ik">ogni ${(()=>{const iv=24/r.f,ih=Math.floor(iv+EPS),im=Math.round((iv-ih)*60);return ih+'h'+(im?' '+String(im).padStart(2,'0')+'m':'');})()}</div></div></div>
         <div class="ii"><span class="ic" style="background:rgba(88,166,255,.15);color:var(--j)">${IC.plane}</span><div><div class="ik">Aerei su tratta</div><div class="iv">${r.n} ${r.n===1?'aereo':'aerei'}</div></div></div>
       </div>
       ${owner()?`<div class="uf">${r.u?`<span class="meta">✓ già ${r.u.planes} ${r.u.planes===1?'aereo':'aerei'} · domanda residua</span>`:'<span></span>'}<button data-act="use" data-j="${r.j}">${r.u?'＋ Aggiungi aerei':'✓ Segna usata'}</button></div>`:''}
@@ -608,7 +612,7 @@ async function loadData(){
 setupAp('hub','hubS',i=>{hubIdx=i;dstIdx=null;try{localStorage.setItem('am4hub',i)}catch(e){}findBest();renderUsed();});
 let bT=null;
 const autoBest=()=>{if(hubIdx==null||!APS) return; clearTimeout(bT); bT=setTimeout(findBest,250);};
-['ac','eng','mode','flo','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
+['ac','eng','mode','flo','gap','rnd','bSort','bN','bNs'].forEach(id=>$(id).addEventListener('change',autoBest));
 ['mY','rng','spd','fc','chkC','chkH','ci','mkLo','fuelP','co2P','tF','tC','bMin','bMax'].forEach(id=>$(id).addEventListener('input',autoBest));
 $('bOut').addEventListener('click',e=>{if(e.target.id==='bMore')renderBest(true);});
 function parkDetail(){$('detailHome').prepend($('detail'));}
