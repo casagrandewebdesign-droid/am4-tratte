@@ -748,8 +748,30 @@ document.querySelectorAll('input').forEach(e=>e.addEventListener('keydown',ev=>{
 calc();
 $('gap').addEventListener('change',durHint); durHint();
 loadData();
-if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js')}catch(e){}}
+
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').then(r=>r.update()).catch(()=>{});}catch(e){}}
+// trascina verso il basso (in cima alla pagina) per aggiornare l'app
+(()=>{
+  const ind=document.createElement('div'); ind.id='ptr';
+  ind.style.cssText='position:fixed;left:50%;top:0;transform:translate(-50%,-60px);z-index:100;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:8px 16px;font-size:.85rem;box-shadow:0 4px 14px rgba(0,0,0,.35);transition:transform .15s';
+  document.body.appendChild(ind);
+  let y0=null, dy=0, busy=false; const TH=90;
+  const open=()=>document.querySelector('.sheet[style*="block"]');
+  addEventListener('touchstart',e=>{if(busy||scrollY>0||open()||e.touches.length>1){y0=null;return;} y0=e.touches[0].clientY; dy=0;},{passive:true});
+  addEventListener('touchmove',e=>{if(y0==null) return; dy=e.touches[0].clientY-y0; if(dy<=0){ind.style.transform='translate(-50%,-60px)';return;}
+    const d=Math.min(dy,TH*1.4); ind.style.transform=`translate(-50%,${d/1.4-40}px)`; ind.textContent=dy>TH?'↻ Rilascia per aggiornare':'↓ Trascina per aggiornare';},{passive:true});
+  addEventListener('touchend',async()=>{if(y0==null) return; y0=null;
+    if(dy<=TH){ind.style.transform='translate(-50%,-60px)';return;}
+    busy=true; ind.textContent='⏳ Aggiornamento…'; ind.style.transform='translate(-50%,16px)';
+    try{
+      const rs=await navigator.serviceWorker?.getRegistrations?.()||[]; await Promise.all(rs.map(r=>r.update().catch(()=>{})));
+      // svuota la cache dell'app (non i dati pesanti della domanda)
+      if(window.caches){const ks=await caches.keys(); await Promise.all(ks.filter(k=>k.startsWith('am4-tratte')).map(k=>caches.delete(k)));}
+    }catch(e){}
+    location.reload();
+  });
+})();
 </script>
-<div class="ex" style="text-align:center;margin:20px 0 30px">Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
+<div class="ex" style="text-align:center;margin:20px 0 30px"><b>Versione <span id="appVer">27</span></b> · trascina in giù dall'alto per aggiornare.<br>Calcolatore non ufficiale per Airline Manager 4. Dati di aeroporti, domanda e aerei e formule dal progetto open-source <a href="https://github.com/abc8747/am4" style="color:inherit">abc8747/am4</a> (licenza MIT): i risultati sono indicativi.</div>
 </body>
 </html>

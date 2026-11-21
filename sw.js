@@ -1,4 +1,4 @@
-const CACHE='am4-tratte-v26';
+const CACHE='am4-tratte-v27';
 const DATA='am4-data-v1'; // dati pesanti: restano in cache tra un aggiornamento e l'altro
 const FILES=['./','index.html','manifest.json','icon-192.png','icon-512.png','data/airports.json','data/aircraft.json'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)));self.skipWaiting();});
@@ -11,5 +11,5 @@ self.addEventListener('fetch',e=>{
     return;
   }
   // rete prima, cache se offline: così gli aggiornamenti arrivano subito
-  e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return r;}).catch(()=>caches.match(e.request)));
+  e.respondWith(fetch(e.request,{cache:'no-cache'}).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return r;}).catch(()=>caches.match(e.request)));
 });
